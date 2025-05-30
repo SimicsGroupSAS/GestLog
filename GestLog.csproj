@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include Assets and Data files -->
+    <Resource Include="Assets\*" />
+    <EmbeddedResource Include="Data\*.xlsx" />
+    <Content Include="Data\*" Exclude="Data\*.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Exclude original DaaterProccesor files to avoid conflicts -->
+    <Compile Remove="Modules\DaaterProccesor\Views\**" />
+    <Compile Remove="Modules\DaaterProccesor\ViewModels\**" />
+    <Compile Remove="Modules\DaaterProccesor\Services\**" />
+    <Compile Remove="Modules\DaaterProccesor\App.xaml.cs" />
+    <Page Remove="Modules\DaaterProccesor\Views\**" />
+    <ApplicationDefinition Remove="Modules\DaaterProccesor\App.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="FuzzySharp" Version="2.0.2" />
+    <PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,108 @@
+<UserControl x:Class="GestLog.Views.Tools.DaaterProccesor.DaaterProccesorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Background="White">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid Margin="40,30">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                    <Image Source="/Assets/logo.png" Height="60" Width="60" Margin="0,0,15,0" 
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel>
+                        <TextBlock Text="📊 DaaterProccesor" FontSize="28" FontWeight="SemiBold" 
+                                  Foreground="#E67E22" Margin="0,0,0,5"/>
+                        <TextBlock Text="Procesamiento avanzado de archivos Excel" FontSize="16" 
+                                  Foreground="#34495E"/>
+                    </StackPanel>
+                </StackPanel>
+                  <!-- Main Content Card -->
+                <Border Grid.Row="1" Background="#F8F9FA" Padding="30" 
+                       BorderBrush="#E9ECEF" BorderThickness="1">
+                    <StackPanel>
+                        
+                        <!-- Action Buttons -->
+                        <TextBlock Text="Funciones Principales:" FontSize="18" FontWeight="SemiBold" 
+                                  Foreground="#2C3E50" Margin="0,0,0,20"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                              <!-- Process Files Card -->
+                            <Border Grid.Column="0" Background="White" Padding="20" 
+                                   BorderBrush="#DEE2E6" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="📁" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Procesar Archivos Excel" FontWeight="SemiBold" FontSize="16" 
+                                              HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Selecciona una carpeta y procesa todos los archivos Excel contenidos" 
+                                              FontSize="12" Foreground="#6C757D" TextWrapping="Wrap" 
+                                              HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>                                    <Button Content="Seleccionar Carpeta y Procesar" 
+                                           Background="#17A2B8" Foreground="White" 
+                                           Padding="12,8" BorderThickness="0" 
+                                           FontWeight="SemiBold"
+                                           Click="OnProcessExcelFilesClick"/>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Filter Data Card -->
+                            <Border Grid.Column="2" Background="White" Padding="20" 
+                                   BorderBrush="#DEE2E6" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="🔍" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Filtrar Consolidado" FontWeight="SemiBold" FontSize="16" 
+                                              HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Aplicar filtros avanzados a los datos consolidados y exportar resultados" 
+                                              FontSize="12" Foreground="#6C757D" TextWrapping="Wrap" 
+                                              HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>                                    <Button Content="Abrir Filtros" 
+                                           Background="#28A745" Foreground="White"                                           Padding="12,8" BorderThickness="0" 
+                                           FontWeight="SemiBold"
+                                           Click="OnOpenFilteredDataViewClick"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        
+                        <!-- Progress Section -->
+                        <StackPanel Margin="0,25,0,0">
+                            <TextBlock Text="Estado del Proceso:" FontWeight="SemiBold" FontSize="14" 
+                                      Foreground="#2C3E50" Margin="0,0,0,10"/>
+                            <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" 
+                                        Height="20" Background="#E9ECEF" Foreground="#28A745"/>
+                            <TextBlock Text="{Binding ExecutablePath}" FontSize="11" Foreground="#6C757D" 
+                                      TextWrapping="Wrap" Margin="0,10,0,0"/>
+                        </StackPanel>
+                        
+                    </StackPanel>
+                </Border>
+                
+                <!-- Instructions -->
+                <Border Grid.Row="2" Background="#D1ECF1" Padding="20" Margin="0,20,0,0"
+                       BorderBrush="#BEE5EB" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="ℹ️ Instrucciones de Uso:" FontWeight="SemiBold" FontSize="16" 
+                                  Foreground="#0C5460" Margin="0,0,0,10"/>
+                        <TextBlock Text="1. Procesar Archivos: Selecciona una carpeta que contenga archivos Excel (.xlsx) para procesarlos automáticamente" 
+                                  FontSize="13" Foreground="#0C5460" Margin="0,2" TextWrapping="Wrap"/>
+                        <TextBlock Text="2. Filtrar Consolidado: Una vez procesados los archivos, puedes aplicar filtros a los datos consolidados" 
+                                  FontSize="13" Foreground="#0C5460" Margin="0,2" TextWrapping="Wrap"/>
+                        <TextBlock Text="3. Los resultados se guardarán en la carpeta 'Output' dentro del directorio seleccionado" 
+                                  FontSize="13" Foreground="#0C5460" Margin="0,2" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

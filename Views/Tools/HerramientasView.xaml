@@ -1,0 +1,75 @@
+<UserControl x:Class="GestLog.Views.Tools.HerramientasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Background="White">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="40,30">
+                
+                <!-- Header -->
+                <TextBlock Text="🛠️ Herramientas Disponibles" 
+                          FontSize="28" FontWeight="SemiBold" 
+                          Foreground="#2C3E50" Margin="0,0,0,15"/>
+                
+                <TextBlock Text="Selecciona la herramienta que deseas utilizar:" 
+                          FontSize="16" Foreground="#34495E" 
+                          Margin="0,0,0,30"/>
+                
+                <!-- Tools Grid -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                      <!-- DaaterProccesor Card -->
+                    <Border Grid.Column="0" Background="#ECF0F1" Padding="25">
+                        <StackPanel>
+                            <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="DaaterProccesor" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                            <TextBlock Text="Procesamiento avanzado de archivos Excel con funciones de consolidación y filtrado de datos" 
+                                      FontSize="14" Foreground="#7F8C8D" TextWrapping="Wrap" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Name="btnDaaterProccesor" Content="Abrir DaaterProccesor" 
+                                   Background="#E67E22" Foreground="White" 
+                                   Padding="15,8" BorderThickness="0" 
+                                   FontWeight="SemiBold"
+                                   Click="BtnDaaterProccesor_Click"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Future Tool Card -->
+                    <Border Grid.Column="2" Background="#F8F9FA" Padding="25" 
+                           BorderBrush="#BDC3C7" BorderThickness="2" Opacity="0.7">
+                        <StackPanel>
+                            <TextBlock Text="🔧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="Próxima Herramienta" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#95A5A6" Margin="0,0,0,10"/>
+                            <TextBlock Text="Espacio reservado para futuras integraciones de herramientas en el sistema modular" 
+                                      FontSize="14" Foreground="#95A5A6" TextWrapping="Wrap" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Content="Próximamente" 
+                                   Background="#95A5A6" Foreground="White" 
+                                   Padding="15,8" BorderThickness="0" 
+                                   FontWeight="SemiBold"
+                                   IsEnabled="False"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                
+                <!-- Instructions -->
+                <Border Background="#D5DBDB" Padding="20" Margin="0,30,0,0">
+                    <StackPanel>
+                        <TextBlock Text="💡 Instrucciones:" FontWeight="SemiBold" FontSize="16" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                        <TextBlock Text="• Haz clic en cualquiera de las herramientas disponibles para acceder a su funcionalidad" FontSize="14" Foreground="#2C3E50" Margin="0,2"/>
+                        <TextBlock Text="• Usa el botón 'Regresar' en la barra de navegación para volver a esta vista" FontSize="14" Foreground="#2C3E50" Margin="0,2"/>
+                        <TextBlock Text="• El botón 'Home' te llevará siempre a la pantalla principal" FontSize="14" Foreground="#2C3E50" Margin="0,2"/>
+                    </StackPanel>
+                </Border>
+                
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
