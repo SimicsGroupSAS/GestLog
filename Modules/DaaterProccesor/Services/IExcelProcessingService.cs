@@ -1,7 +1,7 @@
 using System.Data;
 using System.Threading.Tasks;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public interface IExcelProcessingService
 {

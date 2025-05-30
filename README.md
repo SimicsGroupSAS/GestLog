@@ -15,11 +15,10 @@ GestLog/
 │   └── DaaterProccesorView.xaml/cs # Vista de integración para DaaterProccesor
 ├── Assets/                        # Recursos compartidos (iconos, imágenes)
 ├── Data/                          # Archivos de datos compartidos
-├── Modules/                       # Carpeta para módulos integrados (solo archivos migrados)
-│   └── DaaterProccesor/           # Ejemplo de módulo integrado
-│       ├── ViewsMigrated/         # Vistas migradas con namespace GestLog.ViewsMigrated
-│       ├── ViewModelsMigrated/    # ViewModels migrados con namespace GestLog.ViewModelsMigrated
-│       ├── ServicesMigrated/      # Servicios migrados con namespace GestLog.ServicesMigrated
+├── Modules/                       # Carpeta para módulos organizados por funcionalidad
+│   └── DaaterProccesor/           # Módulo de procesamiento de datos
+│       ├── ViewModels/            # ViewModels con namespace GestLog.Modules.DaaterProccesor.ViewModels
+│       ├── Services/              # Servicios con namespace GestLog.Modules.DaaterProccesor.Services
 │       └── App_Original.xaml.bak  # Respaldo del App.xaml original
 └── bin/Debug/net9.0-windows/      # Salida de compilación
 ```
@@ -47,29 +46,24 @@ GestLog/
 
 ### Paso 1: Preparar el Módulo
 1. Crear carpeta en `Modules/[NombreModulo]/`
-2. Copiar archivos del proyecto original a subcarpetas:
-   - `Views/` → `ViewsMigrated/`
-   - `ViewModels/` → `ViewModelsMigrated/`
-   - `Services/` → `ServicesMigrated/`
+2. Copiar archivos del proyecto original a subcarpetas organizadas:
+   - `Views/` → `ViewModels/`
+   - `ViewModels/` → `ViewModels/`
+   - `Services/` → `Services/`
 
-### Paso 2: Migrar Namespaces
-1. Actualizar todos los namespaces:
-   - `[ProyectoOriginal].Views` → `GestLog.ViewsMigrated`
-   - `[ProyectoOriginal].ViewModels` → `GestLog.ViewModelsMigrated`
-   - `[ProyectoOriginal].Services` → `GestLog.ServicesMigrated`
+### Paso 2: Organizar Namespaces
+1. Actualizar todos los namespaces usando estructura jerárquica:
+   - `[ProyectoOriginal].Views` → `GestLog.Views.Tools.[NombreModulo]`
+   - `[ProyectoOriginal].ViewModels` → `GestLog.Modules.[NombreModulo].ViewModels`
+   - `[ProyectoOriginal].Services` → `GestLog.Modules.[NombreModulo].Services`
 
-### Paso 3: Actualizar Proyecto
-1. Agregar includes en `GestLog.csproj`:
-   ```xml
-   <Compile Include="Modules\[NombreModulo]\ViewsMigrated\*.cs" />
-   <Compile Include="Modules\[NombreModulo]\ViewModelsMigrated\*.cs" />
-   <Compile Include="Modules\[NombreModulo]\ServicesMigrated\*.cs" />
-   <Page Include="Modules\[NombreModulo]\ViewsMigrated\*.xaml" />
-   ```
+### Paso 3: Configurar Proyecto
+1. Los archivos se incluyen automáticamente con la configuración estándar de WPF SDK
+2. El proyecto está configurado para auto-descubrimiento de archivos
 
 ### Paso 4: Crear Vista de Integración
-1. Crear `[NombreModulo]View.xaml/cs` en la raíz
-2. Implementar como UserControl con referencias a ViewModels migrados
+1. Crear vistas organizadas jerárquicamente en `Views/Tools/[NombreModulo]/`
+2. Implementar como UserControl con referencias a los módulos organizados
 3. Agregar botón en `HerramientasView.xaml` para acceder al módulo
 
 ### Paso 5: Agregar Recursos

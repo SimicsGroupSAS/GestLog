@@ -6,7 +6,7 @@ using System.IO;
 using ClosedXML.Excel;
 using FuzzySharp;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public class ResourceLoaderService : IResourceLoaderService
 {

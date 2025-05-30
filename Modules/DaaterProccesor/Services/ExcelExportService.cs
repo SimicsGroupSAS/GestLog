@@ -1,7 +1,7 @@
 using System.Data;
 using ClosedXML.Excel;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public class ExcelExportService : IExcelExportService
 {

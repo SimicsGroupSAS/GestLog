@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public interface IResourceLoaderService
 {

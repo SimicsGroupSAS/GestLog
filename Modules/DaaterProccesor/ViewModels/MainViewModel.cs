@@ -12,9 +12,9 @@ using System.Windows;
 using ClosedXML.Excel;
 using Ookii.Dialogs.Wpf;
 using System.Diagnostics;
-using GestLog.ServicesMigrated;
+using GestLog.Modules.DaaterProccesor.Services;
 
-namespace GestLog.ViewModelsMigrated;
+namespace GestLog.Modules.DaaterProccesor.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {

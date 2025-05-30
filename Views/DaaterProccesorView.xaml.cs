@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Threading.Tasks;
-using GestLog.ViewModelsMigrated;
+using GestLog.Modules.DaaterProccesor.ViewModels;
 using GestLog.Views.Tools.DaaterProccesor;
 
 namespace GestLog.Views;

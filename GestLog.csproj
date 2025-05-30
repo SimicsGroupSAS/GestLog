@@ -15,12 +15,9 @@
     <Content Include="Data\*" Exclude="Data\*.xlsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <!-- Exclude original DaaterProccesor files to avoid conflicts -->
+  </ItemGroup>  <ItemGroup>
+    <!-- Exclude old DaaterProccesor files to avoid conflicts -->
     <Compile Remove="Modules\DaaterProccesor\Views\**" />
-    <Compile Remove="Modules\DaaterProccesor\ViewModels\**" />
-    <Compile Remove="Modules\DaaterProccesor\Services\**" />
     <Compile Remove="Modules\DaaterProccesor\App.xaml.cs" />
     <Page Remove="Modules\DaaterProccesor\Views\**" />
     <ApplicationDefinition Remove="Modules\DaaterProccesor\App.xaml" />

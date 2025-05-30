@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using ClosedXML.Excel;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public class DataConsolidationService : IDataConsolidationService
 {

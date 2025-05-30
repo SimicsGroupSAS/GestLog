@@ -1,7 +1,7 @@
 using System.Data;
 using System.Linq;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public class ConsolidatedFilterService : IConsolidatedFilterService
 {

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Data;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public interface IDataConsolidationService
 {

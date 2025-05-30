@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace GestLog.ServicesMigrated;
+namespace GestLog.Modules.DaaterProccesor.Services;
 
 public interface IConsolidatedFilterService
 {
