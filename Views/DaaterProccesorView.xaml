@@ -53,7 +53,7 @@
                                            Background="#17A2B8" Foreground="White" 
                                            Padding="12,8" BorderThickness="0" 
                                            FontWeight="SemiBold"
-                                           Click="OnProcessExcelFilesClick"/>
+                                           Command="{Binding ProcessExcelFilesCommand}"/>
                                 </StackPanel>
                             </Border>
                             
@@ -73,13 +73,28 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        
-                        <!-- Progress Section -->
+                          <!-- Progress Section -->
                         <StackPanel Margin="0,25,0,0">
                             <TextBlock Text="Estado del Proceso:" FontWeight="SemiBold" FontSize="14" 
                                       Foreground="#2C3E50" Margin="0,0,0,10"/>
+                              <!-- Status Message -->
+                            <TextBlock Text="{Binding StatusMessage}" FontSize="12" 
+                                      Foreground="#495057" Margin="0,0,0,8" 
+                                      Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+                            
+                            <!-- Progress Bar -->
                             <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" 
                                         Height="20" Background="#E9ECEF" Foreground="#28A745"/>
+                                        
+                            <!-- Cancel Button -->
+                            <Button Content="❌ Cancelar Operación" 
+                                   Background="#DC3545" Foreground="White" 
+                                   Padding="8,4" BorderThickness="0" 
+                                   FontWeight="SemiBold" FontSize="11"
+                                   Margin="0,8,0,0"
+                                   Command="{Binding CancelProcessingCommand}"
+                                   Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            
                             <TextBlock Text="{Binding ExecutablePath}" FontSize="11" Foreground="#6C757D" 
                                       TextWrapping="Wrap" Margin="0,10,0,0"/>
                         </StackPanel>

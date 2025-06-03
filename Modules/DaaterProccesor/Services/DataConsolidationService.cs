@@ -4,18 +4,19 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using ClosedXML.Excel;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 
 public class DataConsolidationService : IDataConsolidationService
-{
-    public DataTable ConsolidarDatos(
+{    public DataTable ConsolidarDatos(
         string folderPath,
         Dictionary<string, string> paises,
         Dictionary<long, string[]> partidas,
         Dictionary<string, string> proveedores,
-        System.IProgress<double> progress)
+        System.IProgress<double> progress,
+        CancellationToken cancellationToken = default)
     {
         var requiredColumns = new List<string>
         {
@@ -52,11 +53,13 @@ public class DataConsolidationService : IDataConsolidationService
         consolidatedData.Columns.Add("PESO TON", typeof(double));
         consolidatedData.Columns.Add("VALOR FOB(USD)", typeof(double));
         consolidatedData.Columns.Add("FOB POR TON", typeof(double));
-        consolidatedData.Columns.Add("DESCRIPCION MERCANCIA", typeof(string));
-        int fileCount = excelFiles.Length;
-        int fileIndex = 0;
-        foreach (var file in excelFiles)
+        consolidatedData.Columns.Add("DESCRIPCION MERCANCIA", typeof(string));        int fileCount = excelFiles.Length;
+        int fileIndex = 0;        foreach (var file in excelFiles)
         {
+            // Verificar cancelación antes de procesar cada archivo
+            cancellationToken.ThrowIfCancellationRequested();
+            System.Diagnostics.Debug.WriteLine($"Procesando archivo: {Path.GetFileName(file)}");
+            
             try
             {
                 using var workbook = new XLWorkbook(file);
@@ -68,12 +71,18 @@ public class DataConsolidationService : IDataConsolidationService
                     .Where(col => !headerRow.Cells().Any(cell => cell.GetString().Trim().Equals(col, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
                 if (missingColumns.Any())
-                    continue;
-                var rows = worksheet.RowsUsed().Skip(1).ToList();
+                    continue;                var rows = worksheet.RowsUsed().Skip(1).ToList();
                 int rowCount = rows.Count;
                 int rowIndex = 0;
                 foreach (var row in rows)
-                {
+                {                    // Verificar cancelación cada 100 filas para no impactar mucho el rendimiento
+                    if (rowIndex % 100 == 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (rowIndex > 0)
+                            System.Diagnostics.Debug.WriteLine($"Procesadas {rowIndex} filas en {Path.GetFileName(file)}");
+                    }
+                    
                     var fecha = row.Cell(1).GetString();
                     var declaracion = row.Cell(2).GetString();
                     var nitImportador = row.Cell(3).GetString();

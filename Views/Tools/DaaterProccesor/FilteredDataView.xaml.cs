@@ -2,6 +2,8 @@ using System;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
 using ClosedXML.Excel;
@@ -12,43 +14,60 @@ namespace GestLog.Views.Tools.DaaterProccesor
     public partial class FilteredDataView : Window
     {
         private DataTable _originalTable = new DataTable();
+        private CancellationTokenSource? _cancellationTokenSource;
 
         public FilteredDataView()
         {
             InitializeComponent();
-            LoadData();
+            _ = LoadDataAsync(); // Fire and forget para el constructor
         }
 
-        private void LoadData()
+        private async Task LoadDataAsync()
         {
-            // Selección automática del archivo consolidado más reciente en la carpeta Output
-            var outputDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
-            DataTable? dt = null;
-            
-            // Verificar si la carpeta Output existe antes de buscar archivos
-            if (Directory.Exists(outputDir))
+            try
             {
-                var files = Directory.GetFiles(outputDir, "*Consolidado*.xlsx");
-                var file = files.OrderByDescending(f => File.GetLastWriteTime(f)).FirstOrDefault();
-                if (file != null)
+                // Selección automática del archivo consolidado más reciente en la carpeta Output
+                var outputDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
+                DataTable? dt = null;
+                
+                // Verificar si la carpeta Output existe antes de buscar archivos
+                if (Directory.Exists(outputDir))
                 {
-                    dt = LoadConsolidatedExcel(file);
+                    var files = Directory.GetFiles(outputDir, "*Consolidado*.xlsx");
+                    var file = files.OrderByDescending(f => File.GetLastWriteTime(f)).FirstOrDefault();
+                    if (file != null)
+                    {
+                        dt = await LoadConsolidatedExcelAsync(file);
+                    }
+                }
+                
+                if (dt != null)
+                {
+                    var filterService = new ConsolidatedFilterService();
+                    var filtered = filterService.FilterRows(dt);
+                    Dispatcher.Invoke(() =>
+                    {
+                        FilteredDataGrid.ItemsSource = filtered.DefaultView;
+                        _originalTable = filtered;
+                        UpdateRecordCount(filtered.Rows.Count);
+                        btnExportExcel.IsEnabled = filtered.Rows.Count > 0;
+                    });
+                }
+                else
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        _originalTable = new DataTable();
+                        UpdateRecordCount(0);
+                    });
                 }
             }
-            
-            if (dt != null)
+            catch (Exception ex)
             {
-                var filterService = new ConsolidatedFilterService();
-                var filtered = filterService.FilterRows(dt);
-                FilteredDataGrid.ItemsSource = filtered.DefaultView;
-                _originalTable = filtered;
-                UpdateRecordCount(filtered.Rows.Count);
-                btnExportExcel.IsEnabled = filtered.Rows.Count > 0;
-            }
-            else
-            {
-                _originalTable = new DataTable();
-                UpdateRecordCount(0);
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show($"Error al cargar los datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
             }
         }
 
@@ -66,7 +85,7 @@ namespace GestLog.Views.Tools.DaaterProccesor
             btnExportExcel.IsEnabled = filtered.Rows.Count > 0;
         }
 
-        private void ExportToExcel_Click(object sender, RoutedEventArgs e)
+        private async void ExportToExcel_Click(object sender, RoutedEventArgs e)
         {
             var filteredData = FilteredDataGrid.ItemsSource as DataView;
             if (filteredData == null || filteredData.Count == 0)
@@ -84,11 +103,19 @@ namespace GestLog.Views.Tools.DaaterProccesor
 
             if (result == MessageBoxResult.Yes)
             {
-                ExportFilteredDataToExcel(filteredData.ToTable());
+                btnExportExcel.IsEnabled = false;
+                try
+                {
+                    await ExportFilteredDataToExcelAsync(filteredData.ToTable());
+                }
+                finally
+                {
+                    btnExportExcel.IsEnabled = true;
+                }
             }
         }
 
-        private void ExportFilteredDataToExcel(DataTable data)
+        private async Task ExportFilteredDataToExcelAsync(DataTable data)
         {
             try
             {
@@ -101,36 +128,48 @@ namespace GestLog.Views.Tools.DaaterProccesor
 
                 if (saveFileDialog.ShowDialog() == true)
                 {
-                    using (var workbook = new XLWorkbook())
+                    _cancellationTokenSource = new CancellationTokenSource();
+                    
+                    await Task.Run(() =>
                     {
-                        var worksheet = workbook.Worksheets.Add("Datos Filtrados");
+                        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
                         
-                        // Agregar encabezados
-                        for (int col = 0; col < data.Columns.Count; col++)
+                        using (var workbook = new XLWorkbook())
                         {
-                            worksheet.Cell(1, col + 1).Value = data.Columns[col].ColumnName;
-                            worksheet.Cell(1, col + 1).Style.Font.Bold = true;
-                            worksheet.Cell(1, col + 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
-                        }
-
-                        // Agregar datos
-                        for (int row = 0; row < data.Rows.Count; row++)
-                        {
+                            var worksheet = workbook.Worksheets.Add("Datos Filtrados");
+                            
+                            // Agregar encabezados
                             for (int col = 0; col < data.Columns.Count; col++)
                             {
-                                worksheet.Cell(row + 2, col + 1).Value = data.Rows[row][col]?.ToString() ?? "";
+                                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                worksheet.Cell(1, col + 1).Value = data.Columns[col].ColumnName;
+                                worksheet.Cell(1, col + 1).Style.Font.Bold = true;
+                                worksheet.Cell(1, col + 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
                             }
+
+                            // Agregar datos
+                            for (int row = 0; row < data.Rows.Count; row++)
+                            {
+                                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                for (int col = 0; col < data.Columns.Count; col++)
+                                {
+                                    worksheet.Cell(row + 2, col + 1).Value = data.Rows[row][col]?.ToString() ?? "";
+                                }
+                            }
+
+                            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                            
+                            // Ajustar ancho de columnas
+                            worksheet.ColumnsUsed().AdjustToContents();
+
+                            // Aplicar filtros automáticos
+                            var range = worksheet.Range(1, 1, data.Rows.Count + 1, data.Columns.Count);
+                            range.SetAutoFilter();
+
+                            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                            workbook.SaveAs(saveFileDialog.FileName);
                         }
-
-                        // Ajustar ancho de columnas
-                        worksheet.ColumnsUsed().AdjustToContents();
-
-                        // Aplicar filtros automáticos
-                        var range = worksheet.Range(1, 1, data.Rows.Count + 1, data.Columns.Count);
-                        range.SetAutoFilter();
-
-                        workbook.SaveAs(saveFileDialog.FileName);
-                    }
+                    }, _cancellationTokenSource.Token);
 
                     var openResult = MessageBox.Show(
                         $"Archivo exportado exitosamente:\n{saveFileDialog.FileName}\n\n¿Desea abrir el archivo ahora?",
@@ -148,38 +187,57 @@ namespace GestLog.Views.Tools.DaaterProccesor
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Exportación cancelada por el usuario.", "Cancelado", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al exportar el archivo:\n{ex.Message}", "Error de exportación", 
                               MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            finally
+            {
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+            }
         }
 
-        private DataTable? LoadConsolidatedExcel(string filePath)
+        private async Task<DataTable?> LoadConsolidatedExcelAsync(string filePath)
         {
-            var dt = new DataTable();
-            using (var workbook = new XLWorkbook(filePath))
+            return await Task.Run(() =>
             {
-                var worksheet = workbook.Worksheets.Cast<IXLWorksheet>().FirstOrDefault();
-                if (worksheet == null) return null;
-                
-                bool firstRow = true;
-                foreach (var row in worksheet.RowsUsed())
+                var dt = new DataTable();
+                using (var workbook = new XLWorkbook(filePath))
                 {
-                    if (firstRow)
+                    var worksheet = workbook.Worksheets.Cast<IXLWorksheet>().FirstOrDefault();
+                    if (worksheet == null) return null;
+                    
+                    bool firstRow = true;
+                    foreach (var row in worksheet.RowsUsed())
                     {
-                        foreach (var cell in row.Cells())
-                            dt.Columns.Add(cell.GetString());
-                        firstRow = false;
-                    }
-                    else
-                    {
-                        var values = row.Cells(1, dt.Columns.Count).Select(c => c.GetValue<string>()).ToArray();
-                        dt.Rows.Add(values);
+                        if (firstRow)
+                        {
+                            foreach (var cell in row.Cells())
+                                dt.Columns.Add(cell.GetString());
+                            firstRow = false;
+                        }
+                        else
+                        {
+                            var values = row.Cells(1, dt.Columns.Count).Select(c => c.GetValue<string>()).ToArray();
+                            dt.Rows.Add(values);
+                        }
                     }
                 }
-            }
-            return dt;
+                return dt;
+            });
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            base.OnClosed(e);
         }
     }
 }
