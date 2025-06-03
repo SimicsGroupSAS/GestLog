@@ -16,13 +16,11 @@ using System.Diagnostics;
 using GestLog.Modules.DaaterProccesor.Services;
 using GestLog.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace GestLog.Modules.DaaterProccesor.ViewModels;
 
 public partial class MainViewModel : ObservableObject
-{
-    [ObservableProperty]
+{    [ObservableProperty]
     private double progress;
 
     [ObservableProperty]
@@ -32,39 +30,34 @@ public partial class MainViewModel : ObservableObject
     private bool isProcessing;
 
     [ObservableProperty]
-    private string? statusMessage;
-
-    public string LogoPath { get; private set; }
+    private string? statusMessage;    public string LogoPath { get; }
 
     private readonly IExcelProcessingService _excelService;
     private readonly IGestLogLogger _logger;
-    private CancellationTokenSource? _cancellationTokenSource;
-
-    // Constructor para usar desde DI
+    private CancellationTokenSource? _cancellationTokenSource;    // Constructor para instanciar desde DI
     public MainViewModel() 
     {
-        // Obtener servicios del contenedor de DI
+        // Este constructor se usa cuando se instancia desde un servicio que usa DI
+        // Los servicios se obtendrán desde el contenedor de DI en tiempo de ejecución
         var serviceProvider = LoggingService.GetServiceProvider();
-        _excelService = serviceProvider.GetRequiredService<IExcelProcessingService>();
-        _logger = serviceProvider.GetRequiredService<IGestLogLogger>();
-        
-        // Inicializar propiedades comunes
-        InitializeViewModel();
+        _excelService = serviceProvider.GetService<IExcelProcessingService>();
+        _logger = serviceProvider.GetService<IGestLogLogger>();
+        Initialize();
     }
     
-    // Constructor para pruebas o instanciación manual
+    // Constructor para pruebas y escenarios específicos
+    public MainViewModel(IExcelProcessingService excelService, IGestLogLogger logger) 
+    {
+        _excelService = excelService;
+        _logger = logger;
+        Initialize();
+    }
+
     public MainViewModel(IExcelProcessingService excelService, IGestLogLogger logger)
     {
         _excelService = excelService;
         _logger = logger;
-        
-        // Inicializar propiedades comunes
-        InitializeViewModel();
-    }
-    
-    // Método común de inicialización
-    private void InitializeViewModel()
-    {
+
         // Ruta base del proyecto
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -85,14 +78,10 @@ public partial class MainViewModel : ObservableObject
         if (!Directory.Exists(outputFolder))
         {
             Directory.CreateDirectory(outputFolder);
-        }
-
-        // Asignar la ruta del directorio real al ExecutablePath para mostrarla en la interfaz
+        }        // Asignar la ruta del directorio real al ExecutablePath para mostrarla en la interfaz
         ExecutablePath = directorioReal;
         StatusMessage = "Listo para procesar archivos.";
-    }
-
-    [RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
+    }    [RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
     public async Task ProcessExcelFilesAsync()
     {
         if (IsProcessing) return;
@@ -216,9 +205,7 @@ public partial class MainViewModel : ObservableObject
                 
             _logger.Logger.LogDebug("🏁 Finalizando ProcessExcelFilesAsync después de {Duration:mm\\:ss}", stopwatch.Elapsed);
         }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanCancelProcessing))]
+    }    [RelayCommand(CanExecute = nameof(CanCancelProcessing))]
     public void CancelProcessing()
     {
         _logger.Logger.LogInformation("⏹️ Usuario solicitó cancelación de operación");

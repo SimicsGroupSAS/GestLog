@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GestLog.Modules.DaaterProccesor.Services;
+using GestLog.Services;
 
 namespace GestLog.Tests
 {
@@ -14,16 +15,14 @@ namespace GestLog.Tests
     public class AsyncPerformanceTest
     {
         private readonly IExcelProcessingService _excelProcessingService;
-        private readonly IExcelExportService _excelExportService;
-
-        public AsyncPerformanceTest()
+        private readonly IExcelExportService _excelExportService;        public AsyncPerformanceTest()
         {
             _excelProcessingService = new ExcelProcessingService(
-                new ResourceLoaderService(),
-                new DataConsolidationService(),
-                new ExcelExportService()
+                new ResourceLoaderService(LoggingService.GetLogger<ResourceLoaderService>()),
+                new DataConsolidationService(LoggingService.GetLogger<DataConsolidationService>()),
+                new ExcelExportService(LoggingService.GetLogger<ExcelExportService>())
             );
-            _excelExportService = new ExcelExportService();
+            _excelExportService = new ExcelExportService(LoggingService.GetLogger<ExcelExportService>());
         }
 
         /// <summary>

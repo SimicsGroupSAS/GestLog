@@ -6,11 +6,16 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using ClosedXML.Excel;
+using GestLog.Services;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 
 public class DataConsolidationService : IDataConsolidationService
-{    public DataTable ConsolidarDatos(
+{
+    private readonly IGestLogLogger _logger;    public DataConsolidationService(IGestLogLogger logger)
+    {
+        _logger = logger;
+    }public DataTable ConsolidarDatos(
         string folderPath,
         Dictionary<string, string> paises,
         Dictionary<long, string[]> partidas,
@@ -18,17 +23,24 @@ public class DataConsolidationService : IDataConsolidationService
         System.IProgress<double> progress,
         CancellationToken cancellationToken = default)
     {
-        var requiredColumns = new List<string>
+        return _logger.LoggedOperation("Consolidación de datos Excel", () =>
         {
-            "FECHA DECLARACIÓN", "NÚMERO DECLARACIÓN", "IMPORTADOR", "IMPORTADOR",
-            "EXPORTADOR (PROVEEDOR)", "DIRECCIÓN EXPORTADOR (PROVEEDOR)", "DATO DE CONTACTO EXPORTADOR",
-            "PAÍS EXPORTADOR", "PAÍS DE ORIGEN", "PARTIDA ARANCELARIA", "PARTIDA ARANCELARIA",
-            "NÚMERO DE BULTOS", "PESO NETO", "VALOR FOB (USD)", "DESCRIPCIÓN MERCANCÍA"
-        };
-        var excelFiles = Directory.GetFiles(folderPath, "*.xlsx");
-        var culture = new CultureInfo("es-ES");
-        CultureInfo.CurrentCulture = culture;
-        CultureInfo.CurrentUICulture = culture;
+            _logger.LogDebug("📊 Iniciando consolidación de datos desde: {FolderPath}", folderPath);
+            
+            var excelFiles = Directory.GetFiles(folderPath, "*.xlsx");
+            _logger.LogDebug("📄 Archivos Excel encontrados: {FileCount}", excelFiles.Length);
+            
+            var requiredColumns = new List<string>
+            {
+                "FECHA DECLARACIÓN", "NÚMERO DECLARACIÓN", "IMPORTADOR", "IMPORTADOR",
+                "EXPORTADOR (PROVEEDOR)", "DIRECCIÓN EXPORTADOR (PROVEEDOR)", "DATO DE CONTACTO EXPORTADOR",
+                "PAÍS EXPORTADOR", "PAÍS DE ORIGEN", "PARTIDA ARANCELARIA", "PARTIDA ARANCELARIA",
+                "NÚMERO DE BULTOS", "PESO NETO", "VALOR FOB (USD)", "DESCRIPCIÓN MERCANCÍA"
+            };
+            
+            var culture = new CultureInfo("es-ES");
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
         var consolidatedData = new DataTable();
         consolidatedData.Columns.Add("Fecha", typeof(DateTime));
         consolidatedData.Columns.Add("Mes", typeof(string));
@@ -54,33 +66,54 @@ public class DataConsolidationService : IDataConsolidationService
         consolidatedData.Columns.Add("VALOR FOB(USD)", typeof(double));
         consolidatedData.Columns.Add("FOB POR TON", typeof(double));
         consolidatedData.Columns.Add("DESCRIPCION MERCANCIA", typeof(string));        int fileCount = excelFiles.Length;
-        int fileIndex = 0;        foreach (var file in excelFiles)
+        int fileIndex = 0;
+        var totalRowsProcessed = 0;
+
+        foreach (var file in excelFiles)
         {
             // Verificar cancelación antes de procesar cada archivo
             cancellationToken.ThrowIfCancellationRequested();
-            System.Diagnostics.Debug.WriteLine($"Procesando archivo: {Path.GetFileName(file)}");
+            
+            var fileName = Path.GetFileName(file);
+            _logger.LogDebug("📂 Procesando archivo {FileIndex}/{FileCount}: {FileName}", 
+                fileIndex + 1, fileCount, fileName);
             
             try
             {
                 using var workbook = new XLWorkbook(file);
                 var worksheet = workbook.Worksheets.FirstOrDefault();
                 if (worksheet == null)
+                {
+                    _logger.LogWarning("⚠️ Archivo sin worksheets válidos: {FileName}", fileName);
                     continue;
+                }
+                
                 var headerRow = worksheet.Row(1);
                 var missingColumns = requiredColumns
                     .Where(col => !headerRow.Cells().Any(cell => cell.GetString().Trim().Equals(col, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
+                    
                 if (missingColumns.Any())
-                    continue;                var rows = worksheet.RowsUsed().Skip(1).ToList();
+                {
+                    _logger.LogWarning("⚠️ Archivo con columnas faltantes: {FileName} - Columnas: {MissingColumns}", 
+                        fileName, string.Join(", ", missingColumns));
+                    continue;
+                }                var rows = worksheet.RowsUsed().Skip(1).ToList();
                 int rowCount = rows.Count;
                 int rowIndex = 0;
+                
+                _logger.LogDebug("📊 Procesando {RowCount} filas del archivo: {FileName}", rowCount, fileName);
+                
                 foreach (var row in rows)
                 {                    // Verificar cancelación cada 100 filas para no impactar mucho el rendimiento
                     if (rowIndex % 100 == 0)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (rowIndex > 0)
-                            System.Diagnostics.Debug.WriteLine($"Procesadas {rowIndex} filas en {Path.GetFileName(file)}");
+                        {
+                            _logger.LogDebug("⚙️ Progreso archivo {FileName}: {ProcessedRows}/{TotalRows} filas", 
+                                fileName, rowIndex, rowCount);
+                        }
                     }
                     
                     var fecha = row.Cell(1).GetString();
@@ -211,13 +244,21 @@ public class DataConsolidationService : IDataConsolidationService
                         pesoNetoValue, pesoTonValue, valorFobUsdValue, fobPorTonValue, descripcionMercancia);
                     rowIndex++;
                     // Reporta progreso granular por fila
-                    double progressValue = ((double)fileIndex + (rowCount > 0 ? (double)rowIndex / rowCount : 0)) * 100.0 / fileCount;
-                    progress?.Report(progressValue);
+                    double progressValue = ((double)fileIndex + (rowCount > 0 ? (double)rowIndex / rowCount : 0)) * 100.0 / fileCount;                    progress?.Report(progressValue);
+                    rowIndex++;
                 }
+                
+                totalRowsProcessed += rowCount;
+                _logger.LogDebug("✅ Archivo completado: {FileName} - {RowCount} filas procesadas", fileName, rowCount);
             }
-            catch { /* Manejo de errores por archivo */ }
-            fileIndex++;
-        }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error procesando archivo: {FileName}", fileName);
+            }
+            fileIndex++;        }
+        
+        _logger.LogDebug("🔄 Ordenando datos consolidados...");
+        
         // Ordenar los datos por el número del mes y luego por "PARTIDA ARANCELARIA"
         var sortedData = consolidatedData.AsEnumerable()
             .OrderBy(row =>
@@ -229,6 +270,11 @@ public class DataConsolidationService : IDataConsolidationService
             })
             .ThenBy(row => row.Field<long>("PARTIDA ARANCELARIA"))
             .CopyToDataTable();
+            
+        _logger.LogDebug("✅ Consolidación completada: {TotalFiles} archivos, {TotalRows} filas, {ConsolidatedRows} filas consolidadas", 
+            fileCount, totalRowsProcessed, sortedData.Rows.Count);
+            
         return sortedData;
+        });
     }
 }
