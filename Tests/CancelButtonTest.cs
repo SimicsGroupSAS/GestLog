@@ -10,8 +10,7 @@ namespace GestLog.Tests
     /// Prueba para verificar que el botón de cancelación funciona correctamente
     /// </summary>
     public class CancelButtonTest
-    {
-        public static async Task TestCancelFunctionality()
+    {        public static Task TestCancelFunctionality()
         {
             Console.WriteLine("=== PRUEBA DE FUNCIONALIDAD DEL BOTÓN DE CANCELACIÓN ===");
             
@@ -61,6 +60,8 @@ namespace GestLog.Tests
             Console.WriteLine($"  StatusMessage: {viewModel.StatusMessage}");
             
             Console.WriteLine("\n=== PRUEBA COMPLETADA ===");
+            
+            return Task.CompletedTask;
         }
     }
 }

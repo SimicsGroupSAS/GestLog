@@ -86,8 +86,7 @@ namespace GestLog.Tests
             
             Console.WriteLine("\n=== PRUEBA COMPLETADA ===");
         }
-        
-        public static async Task TestCancellationFlow()
+          public static Task TestCancellationFlow()
         {
             Console.WriteLine("=== PRUEBA DE FLUJO COMPLETO DE CANCELACIÓN ===");
             
@@ -130,6 +129,8 @@ namespace GestLog.Tests
             Console.WriteLine($"  CanCancelProcessing: {viewModel.CancelProcessingCommand.CanExecute(null)}");
             
             Console.WriteLine("\n=== FLUJO DE PRUEBA COMPLETADO ===");
+            
+            return Task.CompletedTask;
         }
     }
 }
