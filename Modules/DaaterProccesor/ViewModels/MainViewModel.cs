@@ -26,7 +26,7 @@ public partial class MainViewModel : ObservableObject
     private double progress;
 
     [ObservableProperty]
-    private string executablePath;
+    private string executablePath = string.Empty;
 
     [ObservableProperty]
     private bool isProcessing;
@@ -34,7 +34,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string? statusMessage;
 
-    public string LogoPath { get; private set; }
+    public string LogoPath { get; private set; } = string.Empty;
 
     private readonly IExcelProcessingService _excelService;
     private readonly IGestLogLogger _logger;

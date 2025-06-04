@@ -29,7 +29,28 @@ public partial class HerramientasView : UserControl
         try
         {
             var errorLogView = new ErrorLogView();
-            errorLogView.ShowErrorLog(_mainWindow);
+            
+            // Verificar que _mainWindow no sea null antes de pasarlo como parámetro
+            if (_mainWindow != null)
+            {
+                errorLogView.ShowErrorLog(_mainWindow);
+            }
+            else
+            {
+                // Usar la ventana actual si _mainWindow es null
+                var currentWindow = Window.GetWindow(this);
+                if (currentWindow != null)
+                {
+                    errorLogView.ShowErrorLog(currentWindow);
+                }
+                else
+                {
+                    // Si no hay ventana disponible, mostrar sin propietario
+                    MessageBox.Show("No se pudo obtener una ventana propietaria para el visor de errores.",
+                        "Advertencia", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    errorLogView.Show();
+                }
+            }
         }
         catch (System.Exception ex)
         {
