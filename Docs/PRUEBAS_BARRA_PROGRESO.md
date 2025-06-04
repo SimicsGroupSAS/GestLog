@@ -5,7 +5,6 @@ Este documento proporciona instrucciones para verificar que la implementación d
 ## Objetivos de la Prueba
 
 - Confirmar que la barra de progreso se mueve de manera suave y no "a brincos"
-- Verificar que la estimación de tiempo restante es precisa y se actualiza correctamente
 - Comprobar el comportamiento de la barra de progreso en diferentes escenarios (cancelación, error)
 - Evaluar el rendimiento y fluidez de la animación en diferentes sistemas
 
@@ -21,8 +20,7 @@ Este documento proporciona instrucciones para verificar que la implementación d
 
 **Resultado esperado:**
 - La barra de progreso debe avanzar de manera suave, sin saltos bruscos
-- El tiempo restante estimado debe actualizarse de forma coherente
-- La barra debe cambiar de color sutilmente según avanza el progreso
+- El mensaje de estado debe actualizarse mostrando el porcentaje actual
 - Al finalizar, la barra debe llegar suavemente al 100%
 
 ### Caso 2: Cancelación de Proceso
@@ -36,7 +34,6 @@ Este documento proporciona instrucciones para verificar que la implementación d
 **Resultado esperado:**
 - La barra de progreso debe detenerse inmediatamente
 - El mensaje de estado debe cambiar a "Operación cancelada por el usuario"
-- El tiempo restante debe mostrar "Cancelado"
 - La barra debe permanecer en la posición donde se canceló la operación
 
 ### Caso 3: Manejo de Errores
@@ -51,7 +48,6 @@ Este documento proporciona instrucciones para verificar que la implementación d
 - La aplicación debe manejar adecuadamente el error
 - La barra de progreso debe comportarse correctamente hasta el error
 - El mensaje de error debe mostrarse claramente
-- El tiempo restante debe mostrar "Error"
 
 ### Caso 4: Rendimiento en Sistemas de Bajas Especificaciones
 
@@ -61,7 +57,7 @@ Este documento proporciona instrucciones para verificar que la implementación d
 
 **Resultado esperado:**
 - La barra de progreso debe seguir siendo suave, aunque posiblemente con menos actualizaciones por segundo
-- La estimación de tiempo debe adaptarse a la velocidad de procesamiento más lenta
+- No debe haber congelaciones ni bloqueos de la interfaz
 - No debe haber congelaciones ni bloqueos de la interfaz
 
 ## Métricas de Éxito

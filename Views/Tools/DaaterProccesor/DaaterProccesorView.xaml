@@ -77,33 +77,15 @@
                         <StackPanel Margin="0,25,0,0">
                             <TextBlock Text="Estado del Proceso:" FontWeight="SemiBold" FontSize="14" 
                                       Foreground="#2C3E50" Margin="0,0,0,10"/>
-                            
-                            <!-- Status Message and Time Remaining -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <!-- Status Message -->
-                                <TextBlock Grid.Column="0"
-                                          Text="{Binding StatusMessage}" FontSize="12" 
-                                          Foreground="#495057" Margin="0,0,10,8" 
-                                          Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
-                                
-                                <!-- Time Remaining -->
-                                <TextBlock Grid.Column="1"
-                                          Text="{Binding TimeRemainingText}" FontSize="12" 
-                                          FontWeight="SemiBold"
-                                          Foreground="#E67E22" Margin="0,0,0,8" 
-                                          Visibility="{Binding TimeRemainingText, Converter={StaticResource StringToVisibilityConverter}}"/>
-                            </Grid>
-                            
-                            <!-- Progress Bar with dynamic colors and smooth transitions -->
+                              <!-- Status Message -->
+                            <TextBlock Text="{Binding StatusMessage}" FontSize="12" 
+                                      Foreground="#495057" Margin="0,0,0,8" 
+                                      Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+                              <!-- Progress Bar with smooth transitions -->
                             <Grid>
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" 
                                             Height="20" Background="#E9ECEF" 
-                                            Foreground="{Binding Progress, Converter={StaticResource ProgressBarColorConverter}}">
+                                            Foreground="#28A745">
                                     <ProgressBar.Resources>
                                         <!-- Añadir transición suave para el cambio de valor -->
                                         <Style TargetType="ProgressBar">
@@ -112,7 +94,6 @@
                                                     <BeginStoryboard>
                                                         <Storyboard>
                                                             <DoubleAnimation Storyboard.TargetProperty="Width" Duration="0:0:0.2"/>
-                                                            <ColorAnimation Storyboard.TargetProperty="(Foreground).(SolidColorBrush.Color)" Duration="0:0:0.3"/>
                                                         </Storyboard>
                                                     </BeginStoryboard>
                                                 </EventTrigger>
