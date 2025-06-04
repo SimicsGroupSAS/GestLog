@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views.Tools.DaaterProccesor;
+using GestLog.Views.Tools.ErrorLog;
 using GestLog.Views;
 
 namespace GestLog.Views.Tools;

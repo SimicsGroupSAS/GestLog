@@ -1,7 +1,7 @@
 using System.Windows;
 using GestLog.ViewModels;
 
-namespace GestLog.Views
+namespace GestLog.Views.Tools.ErrorLog
 {
     /// <summary>
     /// Lógica de interacción para ErrorLogView.xaml

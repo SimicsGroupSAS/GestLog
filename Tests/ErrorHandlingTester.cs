@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using GestLog.Services;
 using GestLog.Views;
+using GestLog.Views.Tools.ErrorLog;
 
 namespace GestLog.Tests
 {
