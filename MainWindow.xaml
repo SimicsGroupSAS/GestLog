@@ -14,8 +14,7 @@
         </Grid.RowDefinitions>
         
         <!-- Navigation Bar -->
-        <Border Grid.Row="0" Background="#34495E" Padding="15,10">
-            <StackPanel Orientation="Horizontal">                <Button x:Name="btnHome" Content="🏠 Home" 
+        <Border Grid.Row="0" Background="#34495E" Padding="15,10">            <StackPanel Orientation="Horizontal">                <Button x:Name="btnHome" Content="🏠 Home" 
                        Background="#2ECC71" Foreground="White" 
                        Padding="12,6" BorderThickness="0" 
                        FontWeight="SemiBold" 
@@ -27,8 +26,7 @@
                        FontWeight="SemiBold" 
                        Margin="0,0,15,0" Click="btnBack_Click"
                        Visibility="Collapsed"/>
-                
-                <TextBlock x:Name="txtCurrentView" Text="Home" 
+                  <TextBlock x:Name="txtCurrentView" Text="Home" 
                           Foreground="White" FontSize="16" FontWeight="SemiBold" 
                           VerticalAlignment="Center" Margin="15,0,0,0"/>
             </StackPanel>

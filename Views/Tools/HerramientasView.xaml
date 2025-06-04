@@ -17,12 +17,13 @@
                 <TextBlock Text="Selecciona la herramienta que deseas utilizar:" 
                           FontSize="16" Foreground="#34495E" 
                           Margin="0,0,0,30"/>
-                
-                <!-- Tools Grid -->
+                  <!-- Tools Grid -->
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="15"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                       <!-- DaaterProccesor Card -->
@@ -40,8 +41,7 @@
                                    Click="BtnDaaterProccesor_Click"/>
                         </StackPanel>
                     </Border>
-                    
-                    <!-- Future Tool Card -->
+                      <!-- Future Tool Card -->
                     <Border Grid.Column="2" Background="#F8F9FA" Padding="25" 
                            BorderBrush="#BDC3C7" BorderThickness="2" Opacity="0.7">
                         <StackPanel>
@@ -55,6 +55,22 @@
                                    Padding="15,8" BorderThickness="0" 
                                    FontWeight="SemiBold"
                                    IsEnabled="False"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Error Log Card -->
+                    <Border Grid.Column="4" Background="#ECF0F1" Padding="25">
+                        <StackPanel>
+                            <TextBlock Text="⚠️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="Registro de Errores" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                            <TextBlock Text="Visualiza y gestiona los errores de la aplicación para diagnosticar y resolver problemas" 
+                                      FontSize="14" Foreground="#7F8C8D" TextWrapping="Wrap" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Name="btnErrorLog" Content="Ver Errores" 
+                                   Background="#E74C3C" Foreground="White" 
+                                   Padding="15,8" BorderThickness="0" 
+                                   FontWeight="SemiBold"
+                                   Click="btnErrorLog_Click"/>
                         </StackPanel>
                     </Border>
                 </Grid>

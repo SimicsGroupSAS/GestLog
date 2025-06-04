@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views.Tools;
+using GestLog.Tests;
 
 namespace GestLog.Views
 {    /// <summary>
@@ -36,5 +37,23 @@ namespace GestLog.Views
                 MessageBoxImage.Information
             );
         }
+
+    /// <summary>
+    /// Método para probar el sistema de manejo de errores
+    /// </summary>
+    private async void btnTestErrorHandler_Click(object sender, RoutedEventArgs e)
+    {
+        // Ejecutar el probador del sistema de manejo de errores
+        var errorTester = new ErrorHandlingTester();
+        
+        if (_mainWindow != null)
+        {
+            await errorTester.RunTestSuite(_mainWindow);
+        }
+        else
+        {
+            await errorTester.RunTestSuite(Window.GetWindow(this));
+        }
+    }
     }
 }

@@ -56,8 +56,10 @@ public static class LoggingService
                 builder.ClearProviders();
                 builder.AddSerilog(Log.Logger);
             });
-              // Servicios custom
+            
+            // Servicios custom
             services.AddSingleton<IGestLogLogger, GestLogLogger>();
+            services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
             
             // Servicios del dominio
             services.AddTransient<Modules.DaaterProccesor.Services.IResourceLoaderService, 
@@ -67,7 +69,8 @@ public static class LoggingService
             services.AddTransient<Modules.DaaterProccesor.Services.IExcelExportService, 
                 Modules.DaaterProccesor.Services.ExcelExportService>();
             services.AddTransient<Modules.DaaterProccesor.Services.IExcelProcessingService, 
-                Modules.DaaterProccesor.Services.ExcelProcessingService>();            services.AddTransient<Modules.DaaterProccesor.Services.IConsolidatedFilterService, 
+                Modules.DaaterProccesor.Services.ExcelProcessingService>();
+            services.AddTransient<Modules.DaaterProccesor.Services.IConsolidatedFilterService, 
                 Modules.DaaterProccesor.Services.ConsolidatedFilterService>();
 
             _serviceProvider = services.BuildServiceProvider();
@@ -136,6 +139,14 @@ public static class LoggingService
     public static IGestLogLogger GetLogger<T>()
     {
         return GetService<IGestLogLogger>();
+    }
+    
+    /// <summary>
+    /// Obtiene el servicio de manejo de errores
+    /// </summary>
+    public static IErrorHandlingService GetErrorHandler()
+    {
+        return GetService<IErrorHandlingService>();
     }
 
     /// <summary>

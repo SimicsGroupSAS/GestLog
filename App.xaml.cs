@@ -70,21 +70,18 @@ public partial class App : Application
         {
             base.OnExit(e);
         }
-    }
-
-    private void SetupGlobalExceptionHandling()
+    }    private void SetupGlobalExceptionHandling()
     {
+        // Obtener el servicio de manejo de errores
+        var errorHandler = LoggingService.GetErrorHandler();
+
         // Excepciones no manejadas en el hilo principal (UI)
         DispatcherUnhandledException += (sender, e) =>
         {
-            _logger?.LogUnhandledException(e.Exception, "DispatcherUnhandledException");
-            
-            MessageBox.Show(
-                $"Se produjo un error inesperado:\n\n{e.Exception.Message}\n\nLa aplicación intentará continuar. " +
-                "Revise los logs para más detalles.",
-                "Error no manejado", 
-                MessageBoxButton.OK, 
-                MessageBoxImage.Warning);
+            errorHandler.HandleException(
+                e.Exception, 
+                "DispatcherUnhandledException",
+                showToUser: true);
             
             e.Handled = true; // Permitir que la aplicación continúe
         };
@@ -92,9 +89,8 @@ public partial class App : Application
         // Excepciones no manejadas en hilos secundarios
         AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
         {
-            var exception = e.ExceptionObject as Exception;
-            _logger?.LogUnhandledException(exception ?? new Exception("Unknown exception"), 
-                "AppDomain.UnhandledException");
+            var exception = e.ExceptionObject as Exception ?? new Exception("Unknown exception");
+            errorHandler.HandleException(exception, "AppDomain.UnhandledException");
             
             if (e.IsTerminating)
             {
@@ -106,8 +102,16 @@ public partial class App : Application
         // Excepciones no observadas en Tasks
         TaskScheduler.UnobservedTaskException += (sender, e) =>
         {
-            _logger?.LogUnhandledException(e.Exception, "TaskScheduler.UnobservedTaskException");
+            errorHandler.HandleException(e.Exception, "TaskScheduler.UnobservedTaskException");
             e.SetObserved(); // Marcar como observada para evitar el cierre de la aplicación
+        };
+        
+        // Suscribirse al evento de errores para posibles notificaciones adicionales
+        errorHandler.ErrorOccurred += (sender, e) =>
+        {
+            // Se puede usar para ejecutar acciones adicionales cuando ocurre un error
+            // Por ejemplo, actualizar un contador de errores en la interfaz de usuario
+            _logger?.Logger.LogDebug("Error registrado: {ErrorId} en {Context}", e.Error.Id, e.Error.Context);
         };
     }
 }

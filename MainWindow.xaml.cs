@@ -136,8 +136,7 @@ public partial class MainWindow : Window
                 // Si no hay stack, ir a Home
                 _logger.LogDebug("Stack de navegación vacío, cargando vista Home");
                 LoadHomeView();
-            }
-        }
+            }        }
         catch (System.Exception ex)
         {
             _logger.LogError(ex, "Error al procesar navegación hacia atrás");
@@ -164,6 +163,29 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Método para probar el sistema de manejo de errores
+    /// </summary>
+    public async void RunErrorHandlingTests()
+    {
+        _logger.LogInformation("Iniciando pruebas del sistema de manejo de errores");
+        
+        try 
+        {
+            var errorTester = new Tests.ErrorHandlingTester();
+            await errorTester.RunTestSuite(this);
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex, "Error al ejecutar las pruebas de manejo de errores");
+            MessageBox.Show(
+                $"Error al ejecutar las pruebas: {ex.Message}",
+                "Error en Pruebas",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+    
     protected override void OnClosed(System.EventArgs e)
     {
         try
