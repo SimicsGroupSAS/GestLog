@@ -8,5 +8,6 @@
         <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:ProgressBarColorConverter x:Key="ProgressBarColorConverter"/>
     </Application.Resources>
 </Application>

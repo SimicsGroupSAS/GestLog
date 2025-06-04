@@ -30,15 +30,24 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool isProcessing;
-
+    
     [ObservableProperty]
     private string? statusMessage;
+    
+    [ObservableProperty]
+    private string? timeRemainingText;
 
     public string LogoPath { get; private set; } = string.Empty;
-
+    
     private readonly IExcelProcessingService _excelService;
     private readonly IGestLogLogger _logger;
     private CancellationTokenSource? _cancellationTokenSource;
+    
+    // Servicio de progreso suavizado para animación fluida
+    private SmoothProgressService _smoothProgress = null!; // Será inicializado en InitializeViewModel
+    
+    // Servicio de estimación de tiempo restante
+    private ProgressEstimationService _timeEstimation = null!; // Será inicializado en InitializeViewModel
 
     // Constructor para usar desde DI
     public MainViewModel() 
@@ -86,10 +95,16 @@ public partial class MainViewModel : ObservableObject
         {
             Directory.CreateDirectory(outputFolder);
         }
-
+        
         // Asignar la ruta del directorio real al ExecutablePath para mostrarla en la interfaz
         ExecutablePath = directorioReal;
         StatusMessage = "Listo para procesar archivos.";
+        
+        // Inicializar el servicio de progreso suavizado
+        _smoothProgress = new SmoothProgressService(value => Progress = value);
+        
+        // Inicializar el servicio de estimación de tiempo
+        _timeEstimation = new ProgressEstimationService();
     }
 
     [RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
@@ -99,6 +114,13 @@ public partial class MainViewModel : ObservableObject
         
         var stopwatch = Stopwatch.StartNew();
         IsProcessing = true;
+        
+        // Establecer directamente el valor 0 para reiniciar la barra sin animación
+        _smoothProgress.SetValueDirectly(0);
+        // Reiniciar estimación de tiempo
+        _timeEstimation.Reset();
+        TimeRemainingText = "Calculando...";
+        
         StatusMessage = "Iniciando procesamiento...";
         _cancellationTokenSource = new CancellationTokenSource();
         
@@ -126,11 +148,28 @@ public partial class MainViewModel : ObservableObject
                         .Where(f => !Path.GetFileName(f).StartsWith("~$")).ToArray();
                     
                     _logger.LogExcelProcessingStarted(folderPath, excelFiles.Length);
-                    
                     StatusMessage = "Procesando archivos Excel...";
+                    
+                    // Usar el servicio de progreso suavizado para animaciones fluidas
                     var progress = new System.Progress<double>(p => 
                     {
-                        Progress = p;
+                        // Reportar al servicio suavizado en lugar de directamente a la propiedad Progress
+                        _smoothProgress.Report(p);
+                        
+                        // Actualizar la estimación de tiempo restante
+                        var remainingTime = _timeEstimation.UpdateProgress(p);
+                        if (remainingTime.HasValue)
+                        {
+                            if (remainingTime.Value.TotalSeconds < 1)
+                                TimeRemainingText = "Finalizando...";
+                            else if (remainingTime.Value.TotalMinutes < 1)
+                                TimeRemainingText = $"Restante: {remainingTime.Value.Seconds} segundos";
+                            else if (remainingTime.Value.TotalHours < 1)
+                                TimeRemainingText = $"Restante: {remainingTime.Value.Minutes}m {remainingTime.Value.Seconds}s";
+                            else 
+                                TimeRemainingText = $"Restante: {(int)remainingTime.Value.TotalHours}h {remainingTime.Value.Minutes}m";
+                        }
+                        
                         StatusMessage = $"Procesando archivos... {p:F1}%";
                         _logger.Logger.LogDebug("📊 Progreso de procesamiento: {Progress:F1}%", p);
                     });
@@ -173,11 +212,41 @@ public partial class MainViewModel : ObservableObject
                     
                     // Verificar cancelación después de la generación
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    
-                    stopwatch.Stop();
+                      stopwatch.Stop();
                     _logger.LogExcelProcessingCompleted(outputFilePath, stopwatch.Elapsed, excelFiles.Length);
                     
-                    StatusMessage = "Procesamiento completado exitosamente.";
+                    // Secuencia de finalización con animación suave para una experiencia satisfactoria
+                    await Task.Run(async () => {
+                        // Pausa breve para asegurar que el usuario vea que el proceso ha finalizado
+                        await Task.Delay(200);
+                        
+                        // Primero llevamos la barra al 99% si aún no lo está
+                        if (_smoothProgress != null)
+                        {
+                            // Si el progreso actual es menor al 90%, hacemos una animación rápida al 99%
+                            if (Progress < 90)
+                            {
+                                _smoothProgress.Report(99);
+                                await Task.Delay(300);
+                            }
+                            // Si ya está por encima del 90%, solo lo llevamos suavemente al 99%
+                            else if (Progress < 99)
+                            {
+                                _smoothProgress.Report(99);
+                                await Task.Delay(200);
+                            }
+                            
+                            // Finalmente completamos al 100% con una pausa para efecto visual
+                            _smoothProgress.Report(100);
+                        }
+                        
+                        // Actualizar mensaje y tiempo restante
+                        await App.Current.Dispatcher.InvokeAsync(() => {
+                            StatusMessage = "Procesamiento completado exitosamente.";
+                            TimeRemainingText = "Completado";
+                        });
+                    });
+                    
                     MessageBox.Show($"Archivo consolidado generado exitosamente en: {outputFilePath}", "Éxito");
                 }
             }
@@ -186,12 +255,14 @@ public partial class MainViewModel : ObservableObject
                 _logger.Logger.LogInformation("👤 Usuario canceló la selección de carpeta");
                 StatusMessage = "Operación cancelada por el usuario.";
             }
-        }
-        catch (OperationCanceledException)
+        }        catch (OperationCanceledException)
         {
             stopwatch.Stop();
             _logger.LogOperationCancelled("ProcessExcelFiles", $"Tiempo transcurrido: {stopwatch.Elapsed:mm\\:ss}");
-            StatusMessage = "Operación cancelada.";
+            
+            // No reiniciar el progreso para que el usuario pueda ver dónde se detuvo
+            StatusMessage = "Operación cancelada por el usuario.";
+            TimeRemainingText = "Cancelado";
             MessageBox.Show("Operación cancelada por el usuario.", "Cancelado");
         }
         catch (Exception ex)
@@ -201,6 +272,7 @@ public partial class MainViewModel : ObservableObject
             _logger.LogPerformance("ProcessExcelFiles_Error", stopwatch.Elapsed);
             
             StatusMessage = $"Error: {ex.Message}";
+            TimeRemainingText = "Error";
             MessageBox.Show($"Ocurrió un error inesperado: {ex.Message}", "Error");
         }
         finally
@@ -225,8 +297,15 @@ public partial class MainViewModel : ObservableObject
         System.Diagnostics.Debug.WriteLine("CancelProcessing ejecutado");
         System.Diagnostics.Debug.WriteLine($"Estado antes de cancelar: IsProcessing={IsProcessing}, TokenSource={_cancellationTokenSource != null}");
         
+        // Cancelar la operación
         _cancellationTokenSource?.Cancel();
+        
+        // Actualizar la UI
         StatusMessage = "Cancelando operación...";
+        TimeRemainingText = "Cancelando...";
+        
+        // Dejar que la barra de progreso se quede donde está para mostrar 
+        // visualmente dónde se detuvo el proceso
         
         System.Diagnostics.Debug.WriteLine("Token de cancelación activado");
         _logger.Logger.LogDebug("🔄 Token de cancelación activado");

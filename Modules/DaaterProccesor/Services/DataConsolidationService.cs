@@ -242,10 +242,9 @@ public class DataConsolidationService : IDataConsolidationService
                         numeroPartidaArancelaria, numeroDeBultos, descripcionGeneral, significadoPartida, significadoSubPartida,
                         significadoSubPartidaNivel1, significadoSubSubPartidaNivel2, significadoSubSubPartidaNivel3,
                         pesoNetoValue, pesoTonValue, valorFobUsdValue, fobPorTonValue, descripcionMercancia);
-                    rowIndex++;
-                    // Reporta progreso granular por fila
-                    double progressValue = ((double)fileIndex + (rowCount > 0 ? (double)rowIndex / rowCount : 0)) * 100.0 / fileCount;                    progress?.Report(progressValue);
-                    rowIndex++;
+                    rowIndex++;                    // Reporta progreso granular por fila
+                    double progressValue = ((double)fileIndex + (rowCount > 0 ? (double)rowIndex / rowCount : 0)) * 100.0 / fileCount;
+                    progress?.Report(Math.Min(Math.Max(progressValue, 0), 100)); // Asegurar valor entre 0-100
                 }
                 
                 totalRowsProcessed += rowCount;
