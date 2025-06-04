@@ -72,29 +72,7 @@
                                    FontWeight="SemiBold"
                                    Click="btnInfo_Click"/>
                         </StackPanel>
-                    </Border>
-                </Grid>
-                
-                <!-- Test Error Handling Section -->
-                <TextBlock Text="Pruebas de Sistema" 
-                          FontSize="22" FontWeight="SemiBold" 
-                          Foreground="#2C3E50" Margin="0,40,0,20"/>
-                
-                <Border Background="#ECF0F1" Padding="25" Margin="0,0,0,20">
-                    <StackPanel>
-                        <TextBlock Text="⚠️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                        <TextBlock Text="Pruebas del Manejo de Errores" FontSize="20" FontWeight="SemiBold" 
-                                  HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
-                        <TextBlock Text="Ejecutar pruebas para validar el sistema de manejo de errores" 
-                                  FontSize="14" Foreground="#7F8C8D" TextWrapping="Wrap" 
-                                  HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>
-                        <Button Name="btnTestErrorHandler" Content="Ejecutar Pruebas" 
-                               Background="#E74C3C" Foreground="White" 
-                               Padding="15,8" BorderThickness="0" 
-                               FontWeight="SemiBold"
-                               Click="btnTestErrorHandler_Click"/>
-                    </StackPanel>
-                </Border>
+                    </Border>                </Grid>
                 
                 <!-- Features Section -->
                 <TextBlock Text="Características del Sistema" 
