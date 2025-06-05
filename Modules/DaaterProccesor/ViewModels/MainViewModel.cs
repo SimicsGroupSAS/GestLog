@@ -20,15 +20,34 @@ using Microsoft.Extensions.DependencyInjection;
 namespace GestLog.Modules.DaaterProccesor.ViewModels;
 
 public partial class MainViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private double progress;
+{    [ObservableProperty]
+    private double progress = 0.0; // ✅ Inicializar explícitamente en 0    // ✅ Método para actualizar el progreso con validación
+    public void UpdateProgress(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            _logger.LogWarning("⚠️ Intento de asignar valor inválido al progreso: {Value}. Usando 0.0", value);
+            Progress = 0.0;
+        }
+        else
+        {
+            Progress = Math.Max(0.0, Math.Min(100.0, value)); // Asegurar rango [0, 100]
+        }
+    }
+
+    // ✅ Método para resetear el progreso de manera segura
+    public void ResetProgress()
+    {
+        Progress = 0.0;
+        StatusMessage = "Listo para procesar archivos.";
+        _logger.LogDebug("🔄 Progreso reseteado a 0%");
+    }
 
     [ObservableProperty]
     private string executablePath = string.Empty;
 
     [ObservableProperty]
-    private bool isProcessing;
+    private bool isProcessing = false; // ✅ Inicializar explícitamente
     
     [ObservableProperty]
     private string? statusMessage;
@@ -92,9 +111,8 @@ public partial class MainViewModel : ObservableObject
         // Asignar la ruta del directorio real al ExecutablePath para mostrarla en la interfaz
         ExecutablePath = directorioReal;
         StatusMessage = "Listo para procesar archivos.";
-        
-        // Inicializar el servicio de progreso suavizado
-        _smoothProgress = new SmoothProgressService(value => Progress = value);
+          // Inicializar el servicio de progreso suavizado con validación
+        _smoothProgress = new SmoothProgressService(value => UpdateProgress(value));
     }
 
     [RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
@@ -225,8 +243,7 @@ public partial class MainViewModel : ObservableObject
                 _logger.Logger.LogInformation("👤 Usuario canceló la selección de carpeta");
                 StatusMessage = "Operación cancelada por el usuario.";
             }
-        }
-        catch (OperationCanceledException)
+        }        catch (OperationCanceledException)
         {
             stopwatch.Stop();
             _logger.LogOperationCancelled("ProcessExcelFiles", $"Tiempo transcurrido: {stopwatch.Elapsed:mm\\:ss}");
@@ -241,6 +258,8 @@ public partial class MainViewModel : ObservableObject
             _logger.LogExcelProcessingError("ProcessExcelFilesAsync", ex);
             _logger.LogPerformance("ProcessExcelFiles_Error", stopwatch.Elapsed);
             
+            // ✅ Reset seguro del progreso en caso de error
+            ResetProgress();
             StatusMessage = $"Error: {ex.Message}";
             MessageBox.Show($"Ocurrió un error inesperado: {ex.Message}", "Error");
         }

@@ -80,23 +80,25 @@
                               <!-- Status Message -->
                             <TextBlock Text="{Binding StatusMessage}" FontSize="12" 
                                       Foreground="#495057" Margin="0,0,0,8" 
-                                      Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
-                              <!-- Progress Bar with smooth transitions -->
+                                      Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>                            <!-- Progress Bar with smooth transitions -->
                             <Grid>
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" 
                                             Height="20" Background="#E9ECEF" 
                                             Foreground="#28A745">
                                     <ProgressBar.Resources>
-                                        <!-- Añadir transición suave para el cambio de valor -->
+                                        <!-- Transición suave sin animar Width directamente -->
                                         <Style TargetType="ProgressBar">
                                             <Style.Triggers>
-                                                <EventTrigger RoutedEvent="ProgressBar.ValueChanged">
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <DoubleAnimation Storyboard.TargetProperty="Width" Duration="0:0:0.2"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </EventTrigger>
+                                                <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Value" 
+                                                                               From="0" Duration="0:0:0.3"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </ProgressBar.Resources>
