@@ -1,54 +1,274 @@
-# Instrucciones para Probar el Sistema de Manejo de Errores
+# Sistema de Manejo de Errores - Implementación y Pruebas
 
-## Introducción
+## 1. Guía de Implementación
 
-Este documento proporciona instrucciones paso a paso para probar el nuevo sistema de manejo de errores implementado en la aplicación GestLog. Las pruebas están diseñadas para validar tanto la funcionalidad del sistema de manejo de errores como la reorganización de la interfaz de usuario.
+### 1.1 Arquitectura del Sistema de Errores
 
-## Pruebas Manuales
+El sistema de manejo de errores de GestLog se implementa en tres niveles:
 
-### 1. Verificación de la Interfaz de Usuario
+1. **Captura de Excepciones**: Centralización de toda la lógica de manejo de excepciones
+2. **Registro de Errores**: Almacenamiento persistente de información detallada
+3. **Interfaz de Usuario**: Presentación y navegación de errores registrados
 
-1. **Comprobar la Barra de Navegación Principal**:
-   - Iniciar la aplicación GestLog
-   - Verificar que el botón de errores ya no está presente en la barra de navegación principal
+### 1.2 Implementación Paso a Paso
 
-2. **Acceso desde la Sección de Herramientas**:
-   - Hacer clic en el botón "Ir a Herramientas" en la pantalla principal
-   - Verificar que existe una sección "Registro de Errores" con un botón "Ver Errores" en la vista de herramientas
-   - Comprobar que el diseño es coherente con otras herramientas del panel
+#### Paso 1: Crear el Servicio de Manejo de Errores
+```csharp
+// 1. Definir una interfaz clara
+public interface IErrorHandlingService
+{
+    // 2. Método principal para manejar excepciones
+    void HandleException(Exception ex, string context);
+    
+    // 3. Métodos adicionales para consulta y reportes
+    IEnumerable<ErrorRecord> GetRecentErrors(int count = 100);
+    ErrorRecord GetErrorDetails(Guid errorId);
+    void ClearErrors(DateTime olderThan);
+}
 
-### 2. Pruebas del Sistema de Manejo de Errores
+// 4. Implementación concreta del servicio
+public class ErrorHandlingService : IErrorHandlingService
+{
+    // 5. Dependencias necesarias
+    private readonly IGestLogLogger _logger;
+    private readonly IErrorRepository _repository;
+    
+    // 6. Inyección de dependencias
+    public ErrorHandlingService(
+        IGestLogLogger logger,
+        IErrorRepository repository)
+    {
+        _logger = logger;
+        _repository = repository;
+    }
+    
+    // 7. Implementación del método principal
+    public void HandleException(Exception ex, string context)
+    {
+        try
+        {
+            // 8. Crear registro de error con toda la información relevante
+            var errorRecord = new ErrorRecord
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = DateTime.Now,
+                ExceptionType = ex.GetType().FullName,
+                Message = ex.Message,
+                StackTrace = ex.StackTrace,
+                Context = context,
+                InnerExceptionMessage = ex.InnerException?.Message,
+                AdditionalData = CollectAdditionalData(ex)
+            };
+            
+            // 9. Registrar error en múltiples destinos
+            _logger.Error(ex, $"[{context}] {ex.Message}");
+            _repository.SaveError(errorRecord);
+            
+            // 10. Notificar sobre el error si es crítico
+            if (IsCriticalError(ex))
+            {
+                NotifyCriticalError(errorRecord);
+            }
+        }
+        catch (Exception logEx)
+        {
+            // 11. Tratamiento de errores durante el manejo de errores
+            _logger.Fatal(logEx, "Error al registrar excepción");
+        }
+    }
+    
+    // Implementación de métodos adicionales...
+}
+```
 
-1. **Ejecución de Pruebas Automatizadas**:
-   - En la pantalla principal, buscar la sección "Pruebas de Sistema"
-   - Hacer clic en el botón "Ejecutar Pruebas" bajo "Pruebas del Manejo de Errores"
-   - Verificar que aparecen varios mensajes de error controlados
-   - Al finalizar las pruebas, se debería mostrar un mensaje indicando que todas las pruebas se completaron exitosamente
+#### Paso 2: Integrar Manejo de Errores en la UI
+```csharp
+// 1. Implementar ViewModel para visualización de errores
+public class ErrorLogViewModel : ObservableObject
+{
+    // 2. Dependencias y colecciones
+    private readonly IErrorHandlingService _errorService;
+    public ObservableCollection<ErrorRecordViewModel> Errors { get; }
+    
+    // 3. Constructor con inyección
+    public ErrorLogViewModel(IErrorHandlingService errorService)
+    {
+        _errorService = errorService;
+        Errors = new ObservableCollection<ErrorRecordViewModel>();
+        
+        // 4. Comandos
+        ViewErrorDetailsCommand = new RelayCommand<ErrorRecordViewModel>(ExecuteViewErrorDetails);
+        CopyErrorDetailsCommand = new RelayCommand<ErrorRecordViewModel>(ExecuteCopyErrorDetails);
+    }
+    
+    // 5. Método de inicialización
+    public void LoadRecentErrors()
+    {
+        var recentErrors = _errorService.GetRecentErrors(100);
+        
+        Errors.Clear();
+        foreach (var error in recentErrors)
+        {
+            Errors.Add(new ErrorRecordViewModel(error));
+        }
+    }
+    
+    // Implementación de comandos y métodos adicionales...
+}
+```
 
-2. **Verificación del Registro de Errores**:
-   - Navegar a la sección de herramientas
-   - Hacer clic en "Ver Errores" en la sección "Registro de Errores"
-   - Verificar que se abre una ventana de diálogo modal con el título "Registro de Errores"
-   - Comprobar que la lista contiene los errores generados durante las pruebas
-   - Verificar que cada error muestra: ID, Fecha, Tipo, Contexto y Mensaje
+#### Paso 3: Implementar Vista de Errores
+```xml
+<Window x:Class="GestLog.Views.ErrorLogView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Registro de Errores" Height="600" Width="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Lista de errores en el panel izquierdo -->
+        <ListView Grid.Column="0" 
+                  ItemsSource="{Binding Errors}"
+                  SelectedItem="{Binding SelectedError}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Timestamp, StringFormat='dd/MM/yyyy HH:mm'}" 
+                                   FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ExceptionType}" 
+                                   Foreground="#D32F2F"/>
+                        <TextBlock Text="{Binding Message}" 
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        
+        <!-- Detalles del error en el panel derecho -->
+        <Grid Grid.Column="1" DataContext="{Binding SelectedError}">
+            <!-- Implementación de detalles con formato adecuado -->
+        </Grid>
+    </Grid>
+</Window>
+```
 
-### 3. Pruebas de Funcionalidad del Registro de Errores
+## 2. Instrucciones de Prueba
 
-1. **Exploración de Detalles de Error**:
-   - En la ventana de registro de errores, seleccionar un error de la lista
-   - Verificar que el panel derecho muestra los detalles completos del error:
-     - ID único
-     - Marca de tiempo exacta
-     - Contexto de la operación
-     - Tipo de excepción
-     - Mensaje de error
-     - Stack trace completo
+### 2.1 Pruebas Automatizadas
 
-2. **Funcionalidad de Copia**:
+```csharp
+[TestClass]
+public class ErrorHandlingSystemTests
+{
+    [TestMethod]
+    public void ErrorHandling_CapturesAndLogsException()
+    {
+        // 1. Configurar
+        var mockLogger = new Mock<IGestLogLogger>();
+        var mockRepository = new Mock<IErrorRepository>();
+        
+        var errorHandler = new ErrorHandlingService(
+            mockLogger.Object,
+            mockRepository.Object);
+            
+        var testException = new InvalidOperationException("Prueba de error");
+        var testContext = "Test de manejo de errores";
+        
+        // 2. Ejecutar
+        errorHandler.HandleException(testException, testContext);
+        
+        // 3. Verificar
+        mockLogger.Verify(l => l.Error(
+            It.Is<Exception>(e => e.Message == "Prueba de error"), 
+            It.Is<string>(s => s.Contains(testContext))), 
+            Times.Once);
+            
+        mockRepository.Verify(r => r.SaveError(
+            It.Is<ErrorRecord>(rec => 
+                rec.ExceptionType == typeof(InvalidOperationException).FullName &&
+                rec.Message == "Prueba de error" &&
+                rec.Context == testContext)), 
+            Times.Once);
+    }
+    
+    [TestMethod]
+    public void ErrorHandler_HandlesNestedExceptions()
+    {
+        // Configuración similar
+        var innerException = new FileNotFoundException("Archivo no encontrado");
+        var outerException = new ApplicationException("Error de aplicación", innerException);
+        
+        // Ejecutar y verificar que se captura información del innerException
+    }
+    
+    // Más pruebas...
+}
+```
+
+### 2.2 Pruebas Manuales de UI
+
+#### Paso 1: Verificar Navegación a Errores
+1. Iniciar la aplicación GestLog
+2. Hacer clic en el botón "Herramientas" en el menú principal
+3. Verificar que existe una sección "Registro de Errores" en el panel de herramientas
+4. Comprobar que el botón "Ver Errores" está presente y es consistente con el estilo de la aplicación
+
+#### Paso 2: Generar Errores de Prueba
+1. En el panel de herramientas, buscar la sección "Pruebas del Sistema"
+2. Hacer clic en el botón "Ejecutar Prueba de Errores"
+3. Verificar que aparece un mensaje indicando "Prueba completada con 5 errores registrados"
+4. Los errores deben ser generados en distintas partes de la aplicación:
+   - Error de acceso a archivo inexistente
+   - Error de conversión de tipo
+   - Error de validación de datos
+   - Error de conexión simulada
+   - Error de operación no soportada
+
+#### Paso 3: Verificar Registro de Errores
+1. Hacer clic en "Ver Errores" en la sección "Registro de Errores"
+2. Verificar que se abre una ventana modal con título "Registro de Errores"
+3. Comprobar que la ventana contiene:
+   - Lista de errores en el panel izquierdo
+   - Panel de detalles a la derecha
+   - Botones de acción en la parte inferior
+
+4. Verificar en la lista de errores:
+   - Cada error muestra fecha/hora, tipo y mensaje resumido
+   - Los errores están ordenados por fecha (más reciente primero)
+   - Los errores de prueba aparecen en la lista
+   - Se pueden seleccionar elementos de la lista
+
+#### Paso 4: Examinar Detalles de Error
+1. Seleccionar un error de la lista
+2. Verificar que el panel derecho muestra los siguientes detalles:
+   - ID único (formato GUID)
+   - Fecha y hora exacta del error
+   - Tipo de excepción (nombre completo de clase)
+   - Mensaje de error completo
+   - Contexto donde ocurrió el error
+   - Stack trace completo
+   - Información de excepción interna (si existe)
+   - Datos adicionales capturados (como usuario, módulo, etc.)
+
+#### Paso 5: Probar Funcionalidades Adicionales
+1. **Copiar Detalles**:
    - Seleccionar un error
-   - Hacer clic en "Copiar Detalles"
-   - Verificar que aparece un mensaje de confirmación
-   - Pegar el contenido en un editor de texto para verificar que se han copiado todos los detalles
+   - Hacer clic en botón "Copiar Detalles"
+   - Verificar mensaje de confirmación
+   - Pegar en editor de texto y verificar contenido completo
+
+2. **Filtros**:
+   - Usar el cuadro de búsqueda para filtrar por texto
+   - Verificar que la lista se actualiza correctamente
+   - Probar filtros por tipo de error y período de tiempo
+
+3. **Exportación**:
+   - Hacer clic en "Exportar Registro"
+   - Especificar ubicación y formato (CSV/JSON)
+   - Verificar que el archivo generado contiene todos los datos
 
 3. **Actualización del Registro**:
    - Hacer clic en "Actualizar" en la ventana de registro de errores

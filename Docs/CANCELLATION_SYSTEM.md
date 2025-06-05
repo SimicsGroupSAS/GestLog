@@ -14,40 +14,91 @@
      - No se pasaba a `DataConsolidationService`
      - `DataConsolidationService.ConsolidarDatos()` no aceptaba `CancellationToken`
 
-## 2. Solución Implementada
+## 2. Guía de Implementación Paso a Paso
 
 ### 2.1 Arquitectura Consistente de Comandos
+
+#### Paso 1: Convertir Event Handlers a Commands
 ```xml
 <!-- ANTES: Event Handler -->
-<Button Click="OnProcessExcelFilesClick"/>
+<Button Content="Procesar" Click="OnProcessExcelFilesClick"/>
+<Button Content="Cancelar" Click="OnCancelProcessingClick"/>
 
 <!-- DESPUÉS: Command Binding -->
-<Button Command="{Binding ProcessExcelFilesCommand}"/>
+<Button Content="Procesar" Command="{Binding ProcessExcelFilesCommand}"/>
+<Button Content="Cancelar" Command="{Binding CancelProcessingCommand}"/>
 ```
 
+#### Paso 2: Implementar Estructura en ViewModel
 ```csharp
-[RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
-public async Task ProcessExcelFilesAsync()
+// 1. Importar librerías necesarias
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.Threading;
+using System.Threading.Tasks;
+
+// 2. Crear ViewModel con soporte para cancelación
+public partial class MainViewModel : ObservableObject
 {
-    if (IsProcessing) return;
+    // 3. Propiedades observables
+    [ObservableProperty] private bool _isProcessing;
+    [ObservableProperty] private string _statusMessage;
     
-    IsProcessing = true;
-    StatusMessage = "Iniciando procesamiento...";
-    _cancellationTokenSource = new CancellationTokenSource();
+    // 4. Token source para manejo de cancelación
+    private CancellationTokenSource _cancellationTokenSource;
     
-    // ✅ MEJORADO: Notificar cambios en los comandos al inicio
-    ProcessExcelFilesCommand.NotifyCanExecuteChanged();
-    CancelProcessingCommand.NotifyCanExecuteChanged();
+    // 5. Servicios inyectados
+    private readonly IExcelProcessingService _processingService;
     
-    try
+    // 6. Constructor con inyección de dependencias
+    public MainViewModel(IExcelProcessingService processingService)
     {
-        // ... procesamiento ...
+        _processingService = processingService;
     }
-    finally
+    
+    // 7. Comando principal con verificación de CanExecute
+    [RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
+    public async Task ProcessExcelFilesAsync()
     {
-        IsProcessing = false;
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = null;
+        if (IsProcessing) return;
+        
+        // 8. Inicializar estado y cancelación
+        IsProcessing = true;
+        StatusMessage = "Iniciando procesamiento...";
+        _cancellationTokenSource = new CancellationTokenSource();
+        
+        // 9. Notificar cambios en comandos
+        ProcessExcelFilesCommand.NotifyCanExecuteChanged();
+        CancelProcessingCommand.NotifyCanExecuteChanged();
+        
+        try
+        {
+            // 10. Procesamiento con token de cancelación
+            await _processingService.ProcessAsync(_cancellationTokenSource.Token);
+            StatusMessage = "Procesamiento completado";
+        }
+        catch (OperationCanceledException)
+        {
+            // 11. Manejo específico para cancelación
+            StatusMessage = "Operación cancelada por el usuario";
+        }
+        catch (Exception ex) 
+        {
+            // 12. Manejo de otros errores
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            // 13. Limpieza y actualización de estado
+            IsProcessing = false;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+            
+            // 14. Actualizar estado de comandos
+            ProcessExcelFilesCommand.NotifyCanExecuteChanged();
+            CancelProcessingCommand.NotifyCanExecuteChanged();
+        }
+    }
         
         // ✅ MEJORADO: Notificar cambios al final
         ProcessExcelFilesCommand.NotifyCanExecuteChanged();

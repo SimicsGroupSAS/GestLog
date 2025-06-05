@@ -46,65 +46,149 @@ La implementación asíncrona en GestLog proporciona una base sólida para las o
         Visibility="{Binding IsProcessing, Converter={x:Static Converters:BooleanToVisibilityConverter.Instance}}"/>
 ```
 
-## 🛠️ Mejores Prácticas Implementadas
+## 🛠️ Mejores Prácticas e Implementación Paso a Paso
 
-### 1. Patrón Async/Await Correcto
+### 1. Guía de Implementación del Sistema Asíncrono
+
+#### a) Paso 1: Conversión de Métodos a Async/Await
 ```csharp
-// Implementación recomendada para operaciones async
-public async Task ExampleAsync(CancellationToken cancellationToken = default)
+// ❌ Antes: Método sincrónico bloqueante
+public void ExportarConsolidado(DataTable data, string filePath)
 {
-    // Usar Task.Run para operaciones CPU-intensivas
-    await Task.Run(() =>
+    // Código que bloquea el hilo principal
+    WriteToExcel(data, filePath);
+}
+
+// ✅ Después: Método asíncrono no bloqueante
+public async Task ExportarConsolidadoAsync(DataTable data, string filePath, 
+                                          CancellationToken cancellationToken = default)
+{
+    // Verificación inicial
+    if (data == null || string.IsNullOrEmpty(filePath))
+        throw new ArgumentException("Datos o ruta de archivo inválidos");
+        
+    // Enviar operación a hilo secundario para no bloquear UI
+    await Task.Run(() => 
     {
-        // Verificar cancelación en puntos apropiados
         cancellationToken.ThrowIfCancellationRequested();
-        
-        // Trabajo pesado aquí
-        ProcessHeavyWork();
-        
-        // Verificar nuevamente
-        cancellationToken.ThrowIfCancellationRequested();
+        WriteToExcel(data, filePath, cancellationToken);
     }, cancellationToken);
 }
 ```
 
-### 2. Implementación de Cancelación
+#### b) Paso 2: Agregar Soporte para Progreso
 ```csharp
-// Uso correcto de CancellationToken
-public async Task ProcessWithCancellationAsync()
+// Implementación con reporte de progreso
+public async Task ProcesarArchivosExcelAsync(string[] archivos, 
+                                           IProgress<double> progress = null,
+                                           CancellationToken cancellationToken = default)
 {
-    using var cts = new CancellationTokenSource();
-    
-    try
+    int total = archivos.Length;
+    for (int i = 0; i < total; i++)
     {
-        await SomeAsyncOperation(cts.Token);
-    }
-    catch (OperationCanceledException)
-    {
-        // Operación cancelada - esto es normal
-        logger.Info("Operación cancelada por el usuario");
-    }
-    finally
-    {
-        // Cleanup automático con 'using'
+        // Verificar cancelación en cada iteración
+        cancellationToken.ThrowIfCancellationRequested();
+        
+        // Procesar archivo individual
+        await ProcesarArchivoAsync(archivos[i], cancellationToken);
+        
+        // Reportar progreso si hay un receptor
+        progress?.Report((i + 1) * 100.0 / total);
     }
 }
 ```
 
-### 3. Reporte de Progreso
+#### c) Paso 3: Integración en ViewModel con Comandos
 ```csharp
-// Implementación de Progress<T>
-public async Task ProcessWithProgressAsync()
+// Importaciones necesarias
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+// Implementación en ViewModel
+public partial class MainViewModel : ObservableObject
 {
-    var progress = new Progress<double>(percentage =>
-    {
-        // Actualizar UI en el hilo principal
-        ProgressValue = percentage;
-        StatusMessage = $"Procesando... {percentage:F1}%";
-    });
+    [ObservableProperty] private double _progressValue;
+    [ObservableProperty] private string _statusMessage;
+    [ObservableProperty] private bool _isProcessing;
     
-    await LongRunningOperationAsync(progress);
+    private CancellationTokenSource _cts;
+    private readonly IExcelProcessingService _excelService;
+    
+    // Constructor con inyección de dependencias
+    public MainViewModel(IExcelProcessingService excelService)
+    {
+        _excelService = excelService;
+    }
+    
+    [RelayCommand(CanExecute = nameof(CanProcessExcelFiles))]
+    public async Task ProcessExcelFilesAsync()
+    {
+        if (IsProcessing) return;
+        
+        IsProcessing = true;
+        _cts = new CancellationTokenSource();
+        
+        try
+        {
+            var progress = new Progress<double>(percentage =>
+            {
+                ProgressValue = percentage;
+                StatusMessage = $"Procesando... {percentage:F1}%";
+            });
+            
+            await _excelService.ProcesarArchivosExcelAsync(SelectedFiles, progress, _cts.Token);
+            StatusMessage = "Procesamiento completado exitosamente";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Operación cancelada por el usuario";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
+            _cts?.Dispose();
+            _cts = null;
+        }
+    }
+    
+    [RelayCommand(CanExecute = nameof(IsProcessing))]
+    public void CancelProcessing()
+    {
+        _cts?.Cancel();
+        StatusMessage = "Cancelando operación...";
+    }
+    
+    private bool CanProcessExcelFiles() => !IsProcessing && SelectedFiles.Count > 0;
 }
+```
+
+#### d) Paso 4: Integración en la Vista XAML
+```xml
+<Grid>
+    <!-- Mensaje de estado -->
+    <TextBlock Text="{Binding StatusMessage}" 
+               Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+               
+    <!-- Barra de progreso -->
+    <ProgressBar Value="{Binding ProgressValue}" 
+                 Maximum="100"
+                 Height="10"
+                 Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                 
+    <!-- Botones de acción -->
+    <StackPanel Orientation="Horizontal">
+        <Button Content="Procesar Archivos" 
+                Command="{Binding ProcessExcelFilesCommand}"/>
+                
+        <Button Content="Cancelar" 
+                Command="{Binding CancelProcessingCommand}"
+                Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+    </StackPanel>
+</Grid>
 ```
 
 ## 📝 Guía de Uso del Sistema Asíncrono
