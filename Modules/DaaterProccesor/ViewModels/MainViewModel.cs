@@ -235,7 +235,7 @@ public partial class MainViewModel : ObservableObject
                         });
                     });
                     
-                    MessageBox.Show($"Archivo consolidado generado exitosamente en: {outputFilePath}", "Éxito");
+                    System.Windows.MessageBox.Show($"Archivo consolidado generado exitosamente en: {outputFilePath}", "Éxito");
                 }
             }
             else
@@ -250,7 +250,7 @@ public partial class MainViewModel : ObservableObject
             
             // No reiniciar el progreso para que el usuario pueda ver dónde se detuvo
             StatusMessage = "Operación cancelada por el usuario.";
-            MessageBox.Show("Operación cancelada por el usuario.", "Cancelado");
+            System.Windows.MessageBox.Show("Operación cancelada por el usuario.", "Cancelado");
         }
         catch (Exception ex)
         {
@@ -261,7 +261,7 @@ public partial class MainViewModel : ObservableObject
             // ✅ Reset seguro del progreso en caso de error
             ResetProgress();
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Ocurrió un error inesperado: {ex.Message}", "Error");
+            System.Windows.MessageBox.Show($"Ocurrió un error inesperado: {ex.Message}", "Error");
         }
         finally
         {

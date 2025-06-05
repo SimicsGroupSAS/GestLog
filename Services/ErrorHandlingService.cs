@@ -182,16 +182,14 @@ public class ErrorHandlingService : IErrorHandlingService
         }
 
         // Disparar evento de error
-        OnErrorOccurred(errorRecord);
-
-        // Mostrar al usuario si es necesario
+        OnErrorOccurred(errorRecord);        // Mostrar al usuario si es necesario
         if (showToUser)
         {
             // Ejecutar en el hilo de UI
-            if (Application.Current?.Dispatcher != null && 
-                !Application.Current.Dispatcher.CheckAccess())
+            if (System.Windows.Application.Current?.Dispatcher != null && 
+                !System.Windows.Application.Current.Dispatcher.CheckAccess())
             {
-                Application.Current.Dispatcher.Invoke(() => 
+                System.Windows.Application.Current.Dispatcher.Invoke(() => 
                     ShowErrorToUser(errorRecord, exception));
             }
             else
@@ -207,9 +205,7 @@ public class ErrorHandlingService : IErrorHandlingService
             $"{errorRecord.Message}\n\n" +
             $"Contexto: {errorRecord.Context}\n" +
             $"ID: {errorRecord.Id}\n\n" +
-            "Este error ha sido registrado para su análisis.";
-
-        MessageBox.Show(
+            "Este error ha sido registrado para su análisis.";        System.Windows.MessageBox.Show(
             message,
             "Error en la aplicación",
             MessageBoxButton.OK,

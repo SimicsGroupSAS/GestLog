@@ -43,9 +43,7 @@ namespace GestLog.Tests
                 SimulateUnhandledException();
 
                 // 5. Mostrar la ventana de registro de errores
-                ShowErrorLog(owner);
-
-                MessageBox.Show(
+                ShowErrorLog(owner);                System.Windows.MessageBox.Show(
                     "Todas las pruebas de errores se completaron exitosamente.\n" +
                     "Se han generado varios registros de errores de prueba que puede ver en la ventana de registro de errores.",
                     "Pruebas Completadas",
@@ -53,10 +51,9 @@ namespace GestLog.Tests
                     MessageBoxImage.Information);
             }
             catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error durante las pruebas del manejador de errores");
+            {                _logger.LogError(ex, "Error durante las pruebas del manejador de errores");
                 
-                MessageBox.Show(
+                System.Windows.MessageBox.Show(
                     $"Error al ejecutar las pruebas: {ex.Message}",
                     "Error en Pruebas",
                     MessageBoxButton.OK,

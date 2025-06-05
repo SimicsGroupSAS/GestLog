@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views;
@@ -12,8 +12,8 @@ namespace GestLog;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly Stack<(UserControl view, string title)> _navigationStack;
-    private UserControl? _currentView;
+    private readonly Stack<(System.Windows.Controls.UserControl view, string title)> _navigationStack;
+    private System.Windows.Controls.UserControl? _currentView;
     private readonly IGestLogLogger _logger;
 
     public MainWindow()
@@ -21,7 +21,7 @@ public partial class MainWindow : Window
         try
         {
             InitializeComponent();
-            _navigationStack = new Stack<(UserControl, string)>();
+            _navigationStack = new Stack<(System.Windows.Controls.UserControl, string)>();
             
             // Obtener logger del servicio de logging
             _logger = LoggingService.GetLogger<MainWindow>();
@@ -64,7 +64,7 @@ public partial class MainWindow : Window
         }
     }
 
-    public void NavigateToView(UserControl view, string title)
+    public void NavigateToView(System.Windows.Controls.UserControl view, string title)
     {
         try
         {
@@ -136,7 +136,8 @@ public partial class MainWindow : Window
                 // Si no hay stack, ir a Home
                 _logger.LogDebug("Stack de navegación vacío, cargando vista Home");
                 LoadHomeView();
-            }        }
+            }        
+        }
         catch (System.Exception ex)
         {
             _logger.LogError(ex, "Error al procesar navegación hacia atrás");
@@ -144,7 +145,7 @@ public partial class MainWindow : Window
     }
 
     // Método para compatibilidad con código existente
-    public void SetContent(UserControl control)
+    public void SetContent(System.Windows.Controls.UserControl control)
     {
         try
         {
@@ -161,7 +162,9 @@ public partial class MainWindow : Window
             _logger.LogError(ex, "Error al establecer contenido");
             throw;
         }
-    }    protected override void OnClosed(System.EventArgs e)
+    }    
+
+    protected override void OnClosed(System.EventArgs e)
     {
         try
         {

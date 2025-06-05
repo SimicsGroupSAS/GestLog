@@ -10,7 +10,7 @@ namespace GestLog;
 /// <summary>
 /// Interaction logic for App.xaml
 /// </summary>
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private IGestLogLogger? _logger;
 
@@ -32,10 +32,9 @@ public partial class App : Application
             // Configurar manejo global de excepciones
             SetupGlobalExceptionHandling();
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex)        {
             // Manejo de emergencia si falla la inicialización del logging
-            MessageBox.Show($"Error crítico al inicializar la aplicación:\n{ex.Message}", 
+            System.Windows.MessageBox.Show($"Error crítico al inicializar la aplicación:\n{ex.Message}", 
                 "Error de Inicialización", MessageBoxButton.OK, MessageBoxImage.Error);
             
             // Intentar logging de emergencia
@@ -46,9 +45,8 @@ public partial class App : Application
                 _logger.LogUnhandledException(ex, "App.OnStartup");
             }
             catch
-            {
-                // Si ni siquiera el logging de emergencia funciona, salir
-                Application.Current.Shutdown(1);
+            {                // Si ni siquiera el logging de emergencia funciona, salir
+                System.Windows.Application.Current.Shutdown(1);
                 return;
             }
         }

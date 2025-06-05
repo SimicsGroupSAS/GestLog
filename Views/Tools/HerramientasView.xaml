@@ -16,8 +16,7 @@
                 
                 <TextBlock Text="Selecciona la herramienta que deseas utilizar:" 
                           FontSize="16" Foreground="#34495E" 
-                          Margin="0,0,0,30"/>
-                  <!-- Tools Grid -->
+                          Margin="0,0,0,30"/>                  <!-- Tools Grid -->
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -26,8 +25,13 @@
                         <ColumnDefinition Width="15"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="15"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                       <!-- DaaterProccesor Card -->
-                    <Border Grid.Column="0" Background="#ECF0F1" Padding="25">
+                    <Border Grid.Column="0" Grid.Row="0" Background="#ECF0F1" Padding="25">
                         <StackPanel>
                             <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                             <TextBlock Text="DaaterProccesor" FontSize="20" FontWeight="SemiBold" 
@@ -41,25 +45,24 @@
                                    Click="BtnDaaterProccesor_Click"/>
                         </StackPanel>
                     </Border>
-                      <!-- Future Tool Card -->
-                    <Border Grid.Column="2" Background="#F8F9FA" Padding="25" 
-                           BorderBrush="#BDC3C7" BorderThickness="2" Opacity="0.7">
+                      <!-- Configuration Card -->
+                    <Border Grid.Column="2" Grid.Row="0" Background="#ECF0F1" Padding="25">
                         <StackPanel>
-                            <TextBlock Text="🔧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                            <TextBlock Text="Próxima Herramienta" FontSize="20" FontWeight="SemiBold" 
-                                      HorizontalAlignment="Center" Foreground="#95A5A6" Margin="0,0,0,10"/>
-                            <TextBlock Text="Espacio reservado para futuras integraciones de herramientas en el sistema modular" 
-                                      FontSize="14" Foreground="#95A5A6" TextWrapping="Wrap" 
-                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Content="Próximamente" 
-                                   Background="#95A5A6" Foreground="White" 
+                            <TextBlock Text="⚙️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="Configuración" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                            <TextBlock Text="Configuración unificada de la aplicación, módulos, interfaz y rendimiento del sistema" 
+                                      FontSize="14" Foreground="#7F8C8D" TextWrapping="Wrap" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Name="btnConfiguration" Content="Abrir Configuración" 
+                                   Background="#9B59B6" Foreground="White" 
                                    Padding="15,8" BorderThickness="0" 
                                    FontWeight="SemiBold"
-                                   IsEnabled="False"/>
+                                   Click="BtnConfiguration_Click"/>
                         </StackPanel>
                     </Border>
                     
                     <!-- Error Log Card -->
-                    <Border Grid.Column="4" Background="#ECF0F1" Padding="25">
+                    <Border Grid.Column="4" Grid.Row="0" Background="#ECF0F1" Padding="25">
                         <StackPanel>
                             <TextBlock Text="⚠️" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                             <TextBlock Text="Registro de Errores" FontSize="20" FontWeight="SemiBold" 
@@ -71,6 +74,23 @@
                                    Padding="15,8" BorderThickness="0" 
                                    FontWeight="SemiBold"
                                    Click="btnErrorLog_Click"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Future Tool Card -->
+                    <Border Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3" Background="#F8F9FA" Padding="25" 
+                           BorderBrush="#BDC3C7" BorderThickness="2" Opacity="0.7">
+                        <StackPanel>
+                            <TextBlock Text="🔧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="Próximas Herramientas" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#95A5A6" Margin="0,0,0,10"/>
+                            <TextBlock Text="Espacio reservado para futuras integraciones de herramientas en el sistema modular"
+                                      FontSize="14" Foreground="#95A5A6" TextWrapping="Wrap" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Content="Próximamente" 
+                                   Background="#95A5A6" Foreground="White" 
+                                   Padding="15,8" BorderThickness="0" 
+                                   FontWeight="SemiBold"
+                                   IsEnabled="False"/>
                         </StackPanel>
                     </Border>
                 </Grid>

@@ -16,9 +16,7 @@ namespace GestLog.Views.Tools.DaaterProccesor
     {
         private DataTable _originalTable = new DataTable();
         private CancellationTokenSource? _cancellationTokenSource;
-        private readonly IGestLogLogger _logger;
-
-    public FilteredDataView()
+        private readonly IGestLogLogger _logger;    public FilteredDataView()
     {
         InitializeComponent();
         _logger = LoggingService.GetLogger<FilteredDataView>();
@@ -67,8 +65,9 @@ namespace GestLog.Views.Tools.DaaterProccesor
                         {
                             // Actualizar interfaz de usuario (controles definidos en XAML)
                             _originalTable = filtered;
-                            // UpdateRecordCount(filtered.Rows.Count);
-                            // Otros controles se actualizarán cuando estén disponibles
+                            FilteredDataGrid.ItemsSource = filtered.DefaultView;
+                            UpdateRecordCount(filtered.Rows.Count);
+                            btnExportExcel.IsEnabled = filtered.Rows.Count > 0;
                         }
                         catch (Exception ex)
                         {
@@ -96,15 +95,14 @@ namespace GestLog.Views.Tools.DaaterProccesor
                 
                 Dispatcher.Invoke(() =>
                 {
-                    MessageBox.Show($"Error al cargar los datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"Error al cargar los datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 });
             }
-        }
-
-        private void UpdateRecordCount(int count)
+        }        private void UpdateRecordCount(int count)
         {
             txtRecordCount.Text = $"Registros: {count:N0}";
-        }        private void ApplyFilters_Click(object sender, RoutedEventArgs e)
+            _logger.LogDebug("📊 Actualizado conteo de registros: {Count:N0}", count);
+        }private void ApplyFilters_Click(object sender, RoutedEventArgs e)
         {
             _logger.LogUserInteraction("🔍", "ApplyFilters", "Usuario aplicó filtros manualmente");
             
@@ -119,36 +117,26 @@ namespace GestLog.Views.Tools.DaaterProccesor
                 // FilteredDataGrid.ItemsSource = filtered.DefaultView;
                 // UpdateRecordCount(filtered.Rows.Count);
                 // btnExportExcel.IsEnabled = filtered.Rows.Count > 0;
-            }
-            catch (Exception ex)
+            }            catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error aplicando filtros");
-                MessageBox.Show($"Error al aplicar filtros: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Error al aplicar filtros: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }        private async void ExportToExcel_Click(object sender, RoutedEventArgs e)
         {
             _logger.LogUserInteraction("📤", "ExportToExcel", "Usuario inició exportación a Excel");
             
             try
+            {            // Verificar que hay datos para exportar
+            if (_originalTable == null || _originalTable.Rows.Count == 0)
             {
-                // Comentado hasta que los controles XAML estén disponibles
-                // var filteredData = FilteredDataGrid.ItemsSource as DataView;
-                // if (filteredData == null || filteredData.Count == 0)
-                // {
-                //     MessageBox.Show("No hay datos filtrados para exportar.", "Sin datos", MessageBoxButton.OK, MessageBoxImage.Information);
-                //     return;
-                // }
-                  if (_originalTable == null || _originalTable.Rows.Count == 0)
-                {
-                    _logger.LogWarning("⚠️ No hay datos para exportar");
-                    MessageBox.Show("No hay datos filtrados para exportar.", "Sin datos", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
+                _logger.LogWarning("⚠️ No hay datos para exportar");
+                System.Windows.MessageBox.Show("No hay datos filtrados para exportar.", "Sin datos", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
 
-                var dataRowCount = _originalTable.Rows.Count;
-                _logger.LogInformation("📊 Preparando exportación de {RowCount} registros", dataRowCount);
-
-                var result = MessageBox.Show(
+            var dataRowCount = _originalTable.Rows.Count;
+            _logger.LogInformation("📊 Preparando exportación de {RowCount} registros", dataRowCount);var result = System.Windows.MessageBox.Show(
                     $"¿Desea generar un archivo Excel con los {dataRowCount:N0} registros filtrados?\n\n" +
                     "Este archivo contendrá únicamente los productos de acero y perfiles metálicos que cumplen con los criterios de filtrado.",
                     "Exportar datos filtrados",
@@ -173,11 +161,10 @@ namespace GestLog.Views.Tools.DaaterProccesor
                         // btnExportExcel.IsEnabled = true; // Comentado hasta que el control esté disponible
                     }
                 }
-            }
-            catch (Exception ex)
+            }            catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error en proceso de exportación");
-                MessageBox.Show($"Error al exportar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Error al exportar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }        private async Task ExportFilteredDataToExcelAsync(DataTable data)
         {
@@ -185,8 +172,7 @@ namespace GestLog.Views.Tools.DaaterProccesor
             _logger.LogInformation("📤 Iniciando exportación de {RowCount} registros a Excel", data.Rows.Count);
             
             try
-            {
-                var saveFileDialog = new SaveFileDialog
+            {                var saveFileDialog = new Microsoft.Win32.SaveFileDialog
                 {
                     Filter = "Archivos Excel (*.xlsx)|*.xlsx",
                     FileName = $"DatosFiltrados_Acero_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
@@ -243,9 +229,7 @@ namespace GestLog.Views.Tools.DaaterProccesor
                         }
                     }, _cancellationTokenSource.Token);
 
-                    _logger.LogInformation("✅ Archivo Excel exportado exitosamente: {FileName}", saveFileDialog.FileName);
-
-                    var openResult = MessageBox.Show(
+                    _logger.LogInformation("✅ Archivo Excel exportado exitosamente: {FileName}", saveFileDialog.FileName);                    var openResult = System.Windows.MessageBox.Show(
                         $"Archivo exportado exitosamente:\n{saveFileDialog.FileName}\n\n¿Desea abrir el archivo ahora?",
                         "Exportación exitosa",
                         MessageBoxButton.YesNo,
@@ -265,16 +249,14 @@ namespace GestLog.Views.Tools.DaaterProccesor
                 {
                     _logger.LogInformation("❌ Usuario canceló la selección de archivo para exportación");
                 }
-            }
-            catch (OperationCanceledException)
+            }            catch (OperationCanceledException)
             {
                 _logger.LogWarning("⏹️ Exportación cancelada por el usuario");
-                MessageBox.Show("Exportación cancelada por el usuario.", "Cancelado", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
+                System.Windows.MessageBox.Show("Exportación cancelada por el usuario.", "Cancelado", MessageBoxButton.OK, MessageBoxImage.Information);
+            }            catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error al exportar el archivo Excel");
-                MessageBox.Show($"Error al exportar el archivo:\n{ex.Message}", "Error de exportación", 
+                System.Windows.MessageBox.Show($"Error al exportar el archivo:\n{ex.Message}", "Error de exportación", 
                               MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally

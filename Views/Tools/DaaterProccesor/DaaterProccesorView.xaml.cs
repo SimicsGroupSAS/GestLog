@@ -5,7 +5,7 @@ using GestLog.Views.Tools.DaaterProccesor;
 
 namespace GestLog.Views.Tools.DaaterProccesor;
 
-public partial class DaaterProccesorView : UserControl
+public partial class DaaterProccesorView : System.Windows.Controls.UserControl
 {
     public DaaterProccesorView()
     {

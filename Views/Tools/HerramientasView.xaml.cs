@@ -2,24 +2,37 @@ using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views.Tools.DaaterProccesor;
 using GestLog.Views.Tools.ErrorLog;
+using GestLog.Views.Configuration;
 using GestLog.Views;
 
 namespace GestLog.Views.Tools;
 
-public partial class HerramientasView : UserControl
+public partial class HerramientasView : System.Windows.Controls.UserControl
 {
     private MainWindow? _mainWindow;
 
     public HerramientasView()
     {
         InitializeComponent();
-        _mainWindow = Application.Current.MainWindow as MainWindow;
-    }
-
-    private void BtnDaaterProccesor_Click(object sender, RoutedEventArgs e)
+        _mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+    }    private void BtnDaaterProccesor_Click(object sender, RoutedEventArgs e)
     {
         var daaterProccesorView = new DaaterProccesorView();
         _mainWindow?.NavigateToView(daaterProccesorView, "DaaterProccesor");
+    }
+
+    private void BtnConfiguration_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var configurationView = new ConfigurationView();
+            _mainWindow?.NavigateToView(configurationView, "Configuración");
+        }
+        catch (System.Exception ex)
+        {
+            var errorHandler = Services.LoggingService.GetErrorHandler();
+            errorHandler.HandleException(ex, "Mostrar configuración desde herramientas");
+        }
     }
 
     /// <summary>
@@ -44,10 +57,9 @@ public partial class HerramientasView : UserControl
                 {
                     errorLogView.ShowErrorLog(currentWindow);
                 }
-                else
-                {
+                else                {
                     // Si no hay ventana disponible, mostrar sin propietario
-                    MessageBox.Show("No se pudo obtener una ventana propietaria para el visor de errores.",
+                    System.Windows.MessageBox.Show("No se pudo obtener una ventana propietaria para el visor de errores.",
                         "Advertencia", MessageBoxButton.OK, MessageBoxImage.Warning);
                     errorLogView.Show();
                 }

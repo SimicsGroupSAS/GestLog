@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-  </PropertyGroup>
-  <ItemGroup>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>  <ItemGroup>
     <!-- Include Assets and Data files -->
     <Resource Include="Assets\*" />
     <EmbeddedResource Include="Data\*.xlsx" />
@@ -16,8 +15,9 @@
     </Content>
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>  <ItemGroup>
+    </Content>  </ItemGroup>
+
+  <ItemGroup>
     <!-- Exclude old DaaterProccesor files to avoid conflicts -->
     <Compile Remove="Modules\DaaterProccesor\Views\**" />
     <Compile Remove="Modules\DaaterProccesor\App.xaml.cs" />
