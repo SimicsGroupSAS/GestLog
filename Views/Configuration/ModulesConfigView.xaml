@@ -76,6 +76,24 @@
                                IsSnapToTickEnabled="True" Width="300" 
                                HorizontalAlignment="Left"/>                        <TextBlock Text="{Binding DaaterProcessor.ProcessingTimeoutMinutes, StringFormat={}{0} minutos}" 
                                   FontSize="12" Foreground="#7F8C8D" Margin="0,5,0,0"/>
+                        
+                        <!-- Botón para configuración avanzada -->
+                        <Button Content="Configuración avanzada" 
+                                x:Name="btnAdvancedDaaterProcessorConfig"
+                                Click="BtnAdvancedDaaterProcessorConfig_Click"
+                                Padding="10,5"
+                                Margin="0,15,0,0"
+                                Background="#3498DB"
+                                Foreground="White"
+                                FontWeight="Medium"
+                                BorderThickness="0"
+                                HorizontalAlignment="Left">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="4"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Border>

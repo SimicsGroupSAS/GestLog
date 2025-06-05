@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
+using GestLog.Models.Validation.Attributes;
 
 namespace GestLog.Models.Configuration.Modules;
 
@@ -22,11 +24,11 @@ public class DaaterProcessorSettings : INotifyPropertyChanged
     private string _decimalSeparator = ".";
     private string _thousandsSeparator = ",";
     private bool _enableProgressReporting = true;
-    private bool _enableErrorRecovery = true;
-
-    /// <summary>
+    private bool _enableErrorRecovery = true;    /// <summary>
     /// Ruta de entrada por defecto para archivos a procesar
     /// </summary>
+    [DirectoryExists(AllowEmpty = true, CreateIfNotExists = false)]
+    [Display(Name = "Ruta de Entrada", Description = "Directorio donde se encuentran los archivos Excel a procesar")]
     public string DefaultInputPath
     {
         get => _defaultInputPath;
@@ -36,6 +38,9 @@ public class DaaterProcessorSettings : INotifyPropertyChanged
     /// <summary>
     /// Ruta de salida por defecto para archivos procesados
     /// </summary>
+    [Required(ErrorMessage = "La ruta de salida es requerida")]
+    [DirectoryExists(AllowEmpty = false, CreateIfNotExists = true)]
+    [Display(Name = "Ruta de Salida", Description = "Directorio donde se guardarán los archivos procesados")]
     public string DefaultOutputPath
     {
         get => _defaultOutputPath;
@@ -58,11 +63,11 @@ public class DaaterProcessorSettings : INotifyPropertyChanged
     {
         get => _createBackupBeforeProcessing;
         set => SetProperty(ref _createBackupBeforeProcessing, value);
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Directorio para archivos de backup
     /// </summary>
+    [DirectoryExists(AllowEmpty = true, CreateIfNotExists = true)]
+    [Display(Name = "Directorio de Backup", Description = "Directorio donde se guardarán los archivos de respaldo")]
     public string BackupDirectory
     {
         get => _backupDirectory;
@@ -94,11 +99,11 @@ public class DaaterProcessorSettings : INotifyPropertyChanged
     {
         get => _enableCountryMapping;
         set => SetProperty(ref _enableCountryMapping, value);
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Número máximo de filas por archivo de salida
     /// </summary>
+    [NumericRange(1000, 10000000)]
+    [Display(Name = "Máximo de Filas por Archivo", Description = "Número máximo de filas que puede contener un archivo de salida")]
     public int MaxRowsPerFile
     {
         get => _maxRowsPerFile;
@@ -117,6 +122,9 @@ public class DaaterProcessorSettings : INotifyPropertyChanged
     /// <summary>
     /// Formato de fecha para exportación
     /// </summary>
+    [Required(ErrorMessage = "El formato de fecha es requerido")]
+    [DateFormat("yyyy-MM-dd", "dd/MM/yyyy", "MM/dd/yyyy", "dd-MM-yyyy")]
+    [Display(Name = "Formato de Fecha", Description = "Formato utilizado para las fechas en los archivos de salida")]
     public string DateFormat
     {
         get => _dateFormat;
@@ -126,15 +134,20 @@ public class DaaterProcessorSettings : INotifyPropertyChanged
     /// <summary>
     /// Separador decimal
     /// </summary>
+    [Required(ErrorMessage = "El separador decimal es requerido")]
+    [StringLength(1, ErrorMessage = "El separador decimal debe ser un solo carácter")]
+    [GestLog.Models.Validation.Attributes.AllowedValues(".", ",")]
+    [Display(Name = "Separador Decimal", Description = "Carácter utilizado como separador decimal")]
     public string DecimalSeparator
     {
         get => _decimalSeparator;
         set => SetProperty(ref _decimalSeparator, value);
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Separador de miles
     /// </summary>
+    [StringLength(1, ErrorMessage = "El separador de miles debe ser un solo carácter")]
+    [GestLog.Models.Validation.Attributes.AllowedValues(",", ".", " ", "'", "")]
+    [Display(Name = "Separador de Miles", Description = "Carácter utilizado como separador de miles (puede estar vacío)")]
     public string ThousandsSeparator
     {
         get => _thousandsSeparator;

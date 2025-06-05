@@ -20,6 +20,12 @@
                        FontWeight="SemiBold" 
                        Margin="0,0,10,0" Click="btnHome_Click"/>
                 
+                <Button x:Name="btnConfig" Content="⚙️ Configuración" 
+                       Background="#3498DB" Foreground="White" 
+                       Padding="12,6" BorderThickness="0" 
+                       FontWeight="SemiBold" 
+                       Margin="0,0,10,0" Click="btnConfig_Click"/>
+                
                 <Button x:Name="btnBack" Content="⬅️ Regresar" 
                        Background="#E74C3C" Foreground="White" 
                        Padding="12,6" BorderThickness="0" 

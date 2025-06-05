@@ -62,6 +62,7 @@ public partial class ConfigurationView : System.Windows.Controls.UserControl
             "Logging" => new LoggingConfigView { DataContext = _viewModel?.Configuration?.Logging },
             "Performance" => new PerformanceConfigView { DataContext = _viewModel?.Configuration?.Performance },
             "Modules" => new ModulesConfigView { DataContext = _viewModel?.Configuration?.Modules },
+            "DaaterProcessor" => new DaaterProcessorConfigView(),
             _ => null
         };
 
@@ -69,7 +70,18 @@ public partial class ConfigurationView : System.Windows.Controls.UserControl
         {
             ConfigContentPresenter.Content = sectionView;
         }
-    }    private void SetActiveButton(System.Windows.Controls.Button button)
+    }
+    
+    // Método para navegar directamente a la configuración de DaaterProcessor
+    public void LoadDaaterProcessorConfigView()
+    {
+        NavigateToSection("DaaterProcessor");
+        // No hay botón específico para DaaterProcessor en la barra lateral,
+        // así que resaltamos "Modules" como opción activa
+        SetActiveButton(btnModules);
+    }
+
+    private void SetActiveButton(System.Windows.Controls.Button button)
     {
         // Resetear todos los botones de navegación al estilo normal
         foreach (var child in NavigationPanel.Children)

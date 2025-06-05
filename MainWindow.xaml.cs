@@ -105,8 +105,79 @@ public partial class MainWindow : Window
         {
             _logger.LogError(ex, "Error al procesar clic en botón Home");
         }
+    }    private void btnConfig_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _logger.LogUserInteraction("⚙️", "btnConfig_Click", "Usuario hizo clic en botón Configuración");
+            LoadConfigurationView();
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex, "Error al procesar clic en botón Configuración");
+        }
     }
-
+    
+    private void LoadConfigurationView()
+    {
+        try
+        {
+            _logger.LogUserInteraction("⚙️", "LoadConfigurationView", "Cargando vista general de configuración");
+            
+            using var scope = _logger.BeginOperationScope("LoadConfigurationView");
+            
+            // Primero, cargamos la vista general de configuración
+            var configView = new Views.Configuration.ConfigurationView();
+            
+            // Navegar a la vista de configuración
+            NavigateToView(configView, "Configuración");
+            
+            _logger.LogUserInteraction("⚙️", "LoadConfigurationView", "Vista de configuración cargada correctamente");
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al cargar vista de configuración: {Message}", ex.Message);
+            System.Windows.MessageBox.Show(
+                $"Error al cargar la configuración: {ex.Message}",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
+        }
+    }
+    
+    // Método para navegar directamente a la configuración de DaaterProcessor
+    public void NavigateToDaaterProcessorConfig()
+    {
+        try
+        {
+            _logger.LogUserInteraction("📊", "NavigateToDaaterProcessorConfig", "Navegando a configuración de DaaterProcessor");
+            
+            using var scope = _logger.BeginOperationScope("NavigateToDaaterProcessorConfig");
+            
+            // Primero, cargamos la vista general de configuración
+            var configView = new Views.Configuration.ConfigurationView();
+            
+            // Navegar a la vista de configuración
+            NavigateToView(configView, "Configuración - DaaterProcessor");
+            
+            // Cargar directamente la vista de configuración del DaaterProcessor
+            configView.LoadDaaterProcessorConfigView();
+            
+            _logger.LogUserInteraction("📊", "NavigateToDaaterProcessorConfig", "Vista de configuración de DaaterProcessor cargada correctamente");
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al cargar vista de configuración de DaaterProcessor: {Message}", ex.Message);
+            System.Windows.MessageBox.Show(
+                $"Error al cargar la configuración de DaaterProcessor: {ex.Message}",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
+        }
+    }
+    
     private void btnBack_Click(object sender, RoutedEventArgs e)
     {
         try
