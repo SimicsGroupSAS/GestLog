@@ -260,17 +260,3 @@ ServiceLocator.RegisterSingleton<I[NombreModulo]Service, [NombreModulo]Service>(
 - `Docs/DEPENDENCY_INJECTION_STANDARDIZATION.md` - Inyección de dependencias
 - `Docs/ERROR_HANDLING_TESTING_GUIDE.md` - Manejo de errores
 
-### 🐛 Reporte de Bugs
-- **Logs**: Revisar archivos en `Logs/`
-- **Formato**: Incluir pasos para reproducir
-- **Información**: Versión de .NET, Windows, RAM disponible
-
-### 📞 Contacto
-- **Repositorio**: [GitHub]
-- **Issues**: [GitHub Issues]
-- **Wiki**: [GitHub Wiki]
-
----
-
-**GestLog** - Sistema de Gestión Empresarial Modular  
-© 2025 - Desarrollado con ❤️ y ☕
