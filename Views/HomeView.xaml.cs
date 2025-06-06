@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views.Tools;
-using GestLog.Tests;
 
 namespace GestLog.Views
 {    /// <summary>
