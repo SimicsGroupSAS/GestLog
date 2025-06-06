@@ -63,11 +63,24 @@ public partial class HerramientasView : System.Windows.Controls.UserControl
                         "Advertencia", MessageBoxButton.OK, MessageBoxImage.Warning);
                     errorLogView.Show();
                 }
-            }
-        }
+            }        }
         catch (System.Exception ex)        {
             var errorHandler = LoggingService.GetErrorHandler();
             errorHandler.HandleException(ex, "Mostrar registro de errores desde herramientas");
+        }
+    }
+
+    private void BtnGestionCartera_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var gestionCarteraView = new Views.Tools.GestionCartera.GestionCarteraView();
+            _mainWindow?.NavigateToView(gestionCarteraView, "Gestión de Cartera");
+        }
+        catch (System.Exception ex)
+        {
+            var errorHandler = LoggingService.GetErrorHandler();
+            errorHandler.HandleException(ex, "Mostrar gestión de cartera desde herramientas");
         }
     }
 }

@@ -61,8 +61,7 @@ public static class LoggingService
             services.AddSingleton<IGestLogLogger, GestLogLogger>();
             services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
             services.AddSingleton<Configuration.IConfigurationService, Configuration.ConfigurationService>();
-            
-            // Servicios del dominio
+              // Servicios del dominio
             services.AddTransient<Modules.DaaterProccesor.Services.IResourceLoaderService, 
                 Modules.DaaterProccesor.Services.ResourceLoaderService>();
             services.AddTransient<Modules.DaaterProccesor.Services.IDataConsolidationService, 
@@ -72,7 +71,12 @@ public static class LoggingService
             services.AddTransient<Modules.DaaterProccesor.Services.IExcelProcessingService, 
                 Modules.DaaterProccesor.Services.ExcelProcessingService>();
             services.AddTransient<Modules.DaaterProccesor.Services.IConsolidatedFilterService, 
-                Modules.DaaterProccesor.Services.ConsolidatedFilterService>();
+                Modules.DaaterProccesor.Services.ConsolidatedFilterService>();            // Servicios de Gestión de Cartera
+            services.AddTransient<Modules.GestionCartera.Services.IPdfGeneratorService, 
+                Modules.GestionCartera.Services.PdfGeneratorService>();
+            
+            // ViewModels
+            services.AddTransient<Modules.GestionCartera.ViewModels.DocumentGenerationViewModel>();
 
             _serviceProvider = services.BuildServiceProvider();
             _isInitialized = true;

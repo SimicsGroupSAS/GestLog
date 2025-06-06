@@ -76,9 +76,25 @@
                                    Click="btnErrorLog_Click"/>
                         </StackPanel>
                     </Border>
+                      <!-- Gestión de Cartera Card -->
+                    <Border Grid.Column="0" Grid.Row="2" Background="#ECF0F1" Padding="25">
+                        <StackPanel>
+                            <TextBlock Text="📄" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="Gestión de Cartera" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                            <TextBlock Text="Genera estados de cuenta en PDF desde archivos Excel y gestiona la cartera de clientes" 
+                                      FontSize="14" Foreground="#7F8C8D" TextWrapping="Wrap" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>
+                            <Button Name="btnGestionCartera" Content="Abrir Gestión de Cartera" 
+                                   Background="#27AE60" Foreground="White" 
+                                   Padding="15,8" BorderThickness="0" 
+                                   FontWeight="SemiBold"
+                                   Click="BtnGestionCartera_Click"/>
+                        </StackPanel>
+                    </Border>
                     
                     <!-- Future Tool Card -->
-                    <Border Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3" Background="#F8F9FA" Padding="25" 
+                    <Border Grid.Column="2" Grid.Row="2" Background="#F8F9FA" Padding="25" 
                            BorderBrush="#BDC3C7" BorderThickness="2" Opacity="0.7">
                         <StackPanel>
                             <TextBlock Text="🔧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
@@ -86,7 +102,8 @@
                                       HorizontalAlignment="Center" Foreground="#95A5A6" Margin="0,0,0,10"/>
                             <TextBlock Text="Espacio reservado para futuras integraciones de herramientas en el sistema modular"
                                       FontSize="14" Foreground="#95A5A6" TextWrapping="Wrap" 
-                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>                            <Button Content="Próximamente" 
+                                      HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>
+                            <Button Content="Próximamente" 
                                    Background="#95A5A6" Foreground="White" 
                                    Padding="15,8" BorderThickness="0" 
                                    FontWeight="SemiBold"
