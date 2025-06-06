@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using GestLog.Modules.DaaterProccesor.Services;
 using GestLog.Services;
 
-namespace GestLog.Tests
+namespace GestLog.Tests.PerformanceTests
 {
     /// <summary>
     /// Clase para probar y demostrar las mejoras de rendimiento con async/await

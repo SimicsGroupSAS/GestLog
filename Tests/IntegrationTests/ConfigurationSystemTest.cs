@@ -6,7 +6,7 @@ using GestLog.Services;
 using GestLog.Services.Configuration;
 using GestLog.ViewModels.Configuration;
 
-namespace GestLog.Tests;
+namespace GestLog.Tests.IntegrationTests;
 
 /// <summary>
 /// Test de validación para el sistema de configuración unificado

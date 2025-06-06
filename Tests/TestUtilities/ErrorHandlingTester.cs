@@ -5,7 +5,7 @@ using GestLog.Services;
 using GestLog.Views;
 using GestLog.Views.Tools.ErrorLog;
 
-namespace GestLog.Tests
+namespace GestLog.Tests.TestUtilities
 {
     /// <summary>
     /// Clase de prueba para demostrar y validar el sistema de manejo de errores

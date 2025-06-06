@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using GestLog.Modules.DaaterProccesor.ViewModels;
 using GestLog.Modules.DaaterProccesor.Services;
 
-namespace GestLog.Tests
+namespace GestLog.Tests.PerformanceTests
 {
     /// <summary>
     /// Prueba intensiva para verificar que la cancelación funciona correctamente

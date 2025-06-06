@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using GestLog.Modules.DaaterProccesor.ViewModels;
 using GestLog.Modules.DaaterProccesor.Services;
 
-namespace GestLog.Tests
+namespace GestLog.Tests.Demos
 {
     /// <summary>
     /// Prueba para verificar que el botón de cancelación funciona correctamente

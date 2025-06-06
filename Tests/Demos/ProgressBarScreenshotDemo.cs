@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace GestLog.Tests
+namespace GestLog.Tests.Demos
 {
     public class ProgressBarScreenshotDemo
     {

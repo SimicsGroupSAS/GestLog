@@ -1,36 +1,27 @@
 using System;
 using System.Threading.Tasks;
-using GestLog.Tests;
-using GestLog.Services;
+using GestLog.Tests.IntegrationTests;
 
-namespace GestLog.Testing;
+namespace GestLog.Tests.TestUtilities;
 
 /// <summary>
-/// Programa de testing para validar el sistema de configuración
+/// Programa para ejecutar tests de configuración desde línea de comandos
 /// </summary>
-public class TestRunner
+public class TestConfiguration
 {
     /// <summary>
-    /// Método principal para ejecutar tests desde línea de comandos
+    /// Método principal para ejecutar tests de configuración
     /// </summary>
     public static async Task RunAsync(string[] args)
     {
-        Console.WriteLine("🧪 Sistema de Testing del Sistema de Configuración GestLog");
-        Console.WriteLine("=========================================================");
+        Console.WriteLine("🧪 Ejecutando tests del sistema de configuración GestLog");
+        Console.WriteLine("======================================================");
         
         try
         {
-            // Inicializar servicios antes de ejecutar tests
-            Console.WriteLine("🔧 Inicializando servicios...");
-            var serviceProvider = LoggingService.InitializeServices();
-            
-            Console.WriteLine("🚀 Ejecutando tests del sistema de configuración...");
-            Console.WriteLine();
-            
             var success = await ConfigurationSystemTest.RunTestsAsync();
             
-            Console.WriteLine();
-            Console.WriteLine("=========================================================");
+            Console.WriteLine("\n======================================================");
             
             if (success)
             {
