@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace GestLog.Views.Configuration
+namespace GestLog.Views.Configuration.DaaterProcessor
 {
     /// <summary>
     /// Lógica de interacción para DaaterProcessorConfigView.xaml

@@ -342,7 +342,6 @@ using var cts = new CancellationTokenSource();
 ✅ Modules/DaaterProccesor/ViewModels/MainViewModel.cs
 ✅ Views/Tools/DaaterProccesor/FilteredDataView.xaml.cs
 ✅ Views/Tools/DaaterProccesor/DaaterProccesorView.xaml
-✅ Views/DaaterProccesorView.xaml
 🆕 Converters/BooleanToVisibilityConverter.cs
 🆕 Converters/StringToVisibilityConverter.cs
 🆕 Tests/AsyncPerformanceTest.cs

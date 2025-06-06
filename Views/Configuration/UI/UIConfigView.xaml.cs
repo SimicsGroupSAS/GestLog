@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace GestLog.Views.Configuration;
+namespace GestLog.Views.Configuration.UI;
 
 public partial class UIConfigView : System.Windows.Controls.UserControl
 {

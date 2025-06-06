@@ -4,6 +4,12 @@ using Microsoft.Win32;
 using GestLog.ViewModels.Configuration;
 using GestLog.Services.Configuration;
 using GestLog.Services;
+using GestLog.Views.Configuration.General;
+using GestLog.Views.Configuration.UI;
+using GestLog.Views.Configuration.Logging;
+using GestLog.Views.Configuration.Performance;
+using GestLog.Views.Configuration.Modules;
+using GestLog.Views.Configuration.DaaterProcessor;
 
 namespace GestLog.Views.Configuration;
 

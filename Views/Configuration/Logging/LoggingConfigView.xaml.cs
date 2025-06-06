@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 
-namespace GestLog.Views.Configuration;
+namespace GestLog.Views.Configuration.Logging;
 
 public partial class LoggingConfigView : System.Windows.Controls.UserControl
 {

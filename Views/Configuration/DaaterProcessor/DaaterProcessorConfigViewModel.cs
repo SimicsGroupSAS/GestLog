@@ -15,7 +15,7 @@ using GestLog.Models.Validation.Validators;
 using GestLog.ViewModels.Base;
 using CustomValidationResult = GestLog.Models.Validation.ValidationResult;
 
-namespace GestLog.ViewModels.Configuration
+namespace GestLog.Views.Configuration.DaaterProcessor
 {
     /// <summary>
     /// ViewModel para la configuración del DaaterProcessor con validación integrada
