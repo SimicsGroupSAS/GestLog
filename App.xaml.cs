@@ -1,7 +1,7 @@
 ﻿using System.Configuration;
 using System.Data;
 using System.Windows;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 

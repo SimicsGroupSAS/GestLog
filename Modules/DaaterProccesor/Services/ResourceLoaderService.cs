@@ -5,7 +5,7 @@ using System.Reflection;
 using System.IO;
 using ClosedXML.Excel;
 using FuzzySharp;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 

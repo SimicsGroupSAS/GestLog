@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace GestLog.Services
+namespace GestLog.Services.Core.UI
 {
     /// <summary>
     /// Servicio para estimar el tiempo restante de operaciones basado en el progreso actual

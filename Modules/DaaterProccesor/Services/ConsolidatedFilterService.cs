@@ -1,6 +1,6 @@
 using System.Data;
 using System.Linq;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 

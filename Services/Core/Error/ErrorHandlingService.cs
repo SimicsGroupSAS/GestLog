@@ -3,8 +3,9 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Extensions.Logging;
+using GestLog.Services.Core.Logging;
 
-namespace GestLog.Services;
+namespace GestLog.Services.Core.Error;
 
 /// <summary>
 /// Servicio centralizado para la gestión de errores en la aplicación GestLog

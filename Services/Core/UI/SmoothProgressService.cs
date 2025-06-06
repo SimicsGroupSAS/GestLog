@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Threading;
 
-namespace GestLog.Services
+namespace GestLog.Services.Core.UI
 {
     /// <summary>
     /// Servicio para proporcionar un progreso suavizado para barras de progreso

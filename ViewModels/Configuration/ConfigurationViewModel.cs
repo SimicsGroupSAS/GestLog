@@ -3,7 +3,7 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestLog.Models.Configuration;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 using GestLog.Services.Configuration;
 
 namespace GestLog.ViewModels.Configuration;

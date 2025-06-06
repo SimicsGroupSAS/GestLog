@@ -1,4 +1,4 @@
-using GestLog.Services;
+using GestLog.Services.Core.Error;
 using System;
 using System.Threading.Tasks;
 using System.IO;

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace GestLog.Services;
+namespace GestLog.Services.Core.Logging;
 
 /// <summary>
 /// Interfaz para el servicio de logging de GestLog

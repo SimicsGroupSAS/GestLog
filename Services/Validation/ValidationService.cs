@@ -7,10 +7,12 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 using Microsoft.Extensions.Logging;
+using GestLog.Models.Validation;
+using CustomValidationResult = GestLog.Models.Validation.ValidationResult;
 
-namespace GestLog.Models.Validation;
+namespace GestLog.Services.Validation;
 
 /// <summary>
 /// Implementación del servicio de validación de datos
@@ -23,14 +25,12 @@ public class ValidationService : IValidationService
     public ValidationService(IGestLogLogger logger)
     {
         _logger = logger ?? LoggingService.GetLogger();
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Valida un objeto usando sus atributos de validación
     /// </summary>
-    public ValidationResult ValidateObject(object obj)
+    public CustomValidationResult ValidateObject(object obj)
     {
-        var result = new ValidationResult();
+        var result = new CustomValidationResult();
         
         if (obj == null)
         {
@@ -65,12 +65,10 @@ public class ValidationService : IValidationService
         }
 
         return result;
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Valida un objeto de forma asíncrona
     /// </summary>
-    public async Task<ValidationResult> ValidateObjectAsync(object obj)
+    public async Task<CustomValidationResult> ValidateObjectAsync(object obj)
     {
         return await Task.Run(() => ValidateObject(obj));
     }
@@ -78,9 +76,9 @@ public class ValidationService : IValidationService
     /// <summary>
     /// Valida una propiedad específica de un objeto
     /// </summary>
-    public ValidationResult ValidateProperty(object obj, string propertyName, object? value)
+    public CustomValidationResult ValidateProperty(object obj, string propertyName, object? value)
     {
-        var result = new ValidationResult();
+        var result = new CustomValidationResult();
         
         if (obj == null)
         {
@@ -142,14 +140,12 @@ public class ValidationService : IValidationService
             return validators.OfType<IValidator<T>>();
         }
         return Enumerable.Empty<IValidator<T>>();
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Valida archivos Excel específicamente
     /// </summary>
-    public async Task<ValidationResult> ValidateExcelFileAsync(string filePath)
+    public async Task<CustomValidationResult> ValidateExcelFileAsync(string filePath)
     {
-        var result = new ValidationResult();
+        var result = new CustomValidationResult();
 
         try
         {
@@ -243,14 +239,12 @@ public class ValidationService : IValidationService
         }
 
         return result;
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Valida datos importados desde Excel
     /// </summary>
-    public ValidationResult ValidateExcelData(IEnumerable<Dictionary<string, object?>> data)
+    public CustomValidationResult ValidateExcelData(IEnumerable<Dictionary<string, object?>> data)
     {
-        var result = new ValidationResult();
+        var result = new CustomValidationResult();
 
         try
         {
@@ -280,18 +274,15 @@ public class ValidationService : IValidationService
         }
 
         return result;
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Ejecuta validadores personalizados para un objeto
     /// </summary>
-    private void ExecuteCustomValidators(object obj, ValidationResult result)
+    private void ExecuteCustomValidators(object obj, CustomValidationResult result)
     {
         var objectType = obj.GetType();
         
         // Buscar validadores para el tipo exacto
-        if (_validators.TryGetValue(objectType, out var validators))
-        {
+        if (_validators.TryGetValue(objectType, out var validators))        {
             foreach (var validator in validators)
             {
                 try
@@ -299,7 +290,7 @@ public class ValidationService : IValidationService
                     var method = validator.GetType().GetMethod("Validate");
                     if (method != null)
                     {
-                        var validationResult = method.Invoke(validator, new[] { obj }) as ValidationResult;
+                        var validationResult = method.Invoke(validator, new[] { obj }) as CustomValidationResult;
                         if (validationResult != null)
                         {
                             result.Merge(validationResult);
@@ -322,14 +313,13 @@ public class ValidationService : IValidationService
             {
                 foreach (var validator in baseValidators)
                 {
-                    try
-                    {
+                    try                    {
                         if (validator.GetType().GetMethod("CanValidate")?.Invoke(validator, new object[] { objectType }) is true)
                         {
                             var method = validator.GetType().GetMethod("Validate");
                             if (method != null)
                             {
-                                var validationResult = method.Invoke(validator, new[] { obj }) as ValidationResult;
+                                var validationResult = method.Invoke(validator, new[] { obj }) as CustomValidationResult;
                                 if (validationResult != null)
                                 {
                                     result.Merge(validationResult);
@@ -345,12 +335,10 @@ public class ValidationService : IValidationService
             }
             baseType = baseType.BaseType;
         }
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Valida un registro individual de Excel
     /// </summary>
-    private void ValidateExcelRecord(Dictionary<string, object?> record, int recordIndex, ValidationResult result)
+    private void ValidateExcelRecord(Dictionary<string, object?> record, int recordIndex, CustomValidationResult result)
     {
         var recordPrefix = $"Registro[{recordIndex}]";
 

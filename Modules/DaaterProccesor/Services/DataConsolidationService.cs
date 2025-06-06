@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using ClosedXML.Excel;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 

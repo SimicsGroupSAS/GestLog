@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using GestLog.Models.Validation;
+using CustomValidationResult = GestLog.Models.Validation.ValidationResult;
 
-namespace GestLog.Models.Validation;
+namespace GestLog.Services.Validation;
 
 /// <summary>
 /// Interfaz principal para el servicio de validación de datos
@@ -12,17 +14,17 @@ public interface IValidationService
     /// <summary>
     /// Valida un objeto usando sus atributos de validación
     /// </summary>
-    ValidationResult ValidateObject(object obj);
+    CustomValidationResult ValidateObject(object obj);
 
     /// <summary>
     /// Valida un objeto de forma asíncrona
     /// </summary>
-    Task<ValidationResult> ValidateObjectAsync(object obj);
+    Task<CustomValidationResult> ValidateObjectAsync(object obj);
 
     /// <summary>
     /// Valida una propiedad específica de un objeto
     /// </summary>
-    ValidationResult ValidateProperty(object obj, string propertyName, object? value);
+    CustomValidationResult ValidateProperty(object obj, string propertyName, object? value);
 
     /// <summary>
     /// Registra un validador personalizado
@@ -37,12 +39,12 @@ public interface IValidationService
     /// <summary>
     /// Valida archivos Excel específicamente
     /// </summary>
-    Task<ValidationResult> ValidateExcelFileAsync(string filePath);
+    Task<CustomValidationResult> ValidateExcelFileAsync(string filePath);
 
     /// <summary>
     /// Valida datos importados desde Excel
     /// </summary>
-    ValidationResult ValidateExcelData(IEnumerable<Dictionary<string, object?>> data);
+    CustomValidationResult ValidateExcelData(IEnumerable<Dictionary<string, object?>> data);
 }
 
 /// <summary>

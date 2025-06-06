@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GestLog.Models.Configuration;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Services.Configuration;
 

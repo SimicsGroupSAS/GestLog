@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace GestLog;

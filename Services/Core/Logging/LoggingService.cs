@@ -4,8 +4,9 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using System.IO;
+using GestLog.Services.Core.Error;
 
-namespace GestLog.Services;
+namespace GestLog.Services.Core.Logging;
 
 /// <summary>
 /// Servicio responsable de configurar e inicializar el sistema de logging

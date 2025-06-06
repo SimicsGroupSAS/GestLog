@@ -4,6 +4,7 @@ using GestLog.Views.Tools.DaaterProccesor;
 using GestLog.Views.Tools.ErrorLog;
 using GestLog.Views.Configuration;
 using GestLog.Views;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Views.Tools;
 
@@ -28,9 +29,8 @@ public partial class HerramientasView : System.Windows.Controls.UserControl
             var configurationView = new ConfigurationView();
             _mainWindow?.NavigateToView(configurationView, "Configuración");
         }
-        catch (System.Exception ex)
-        {
-            var errorHandler = Services.LoggingService.GetErrorHandler();
+        catch (System.Exception ex)        {
+            var errorHandler = LoggingService.GetErrorHandler();
             errorHandler.HandleException(ex, "Mostrar configuración desde herramientas");
         }
     }
@@ -65,9 +65,8 @@ public partial class HerramientasView : System.Windows.Controls.UserControl
                 }
             }
         }
-        catch (System.Exception ex)
-        {
-            var errorHandler = Services.LoggingService.GetErrorHandler();
+        catch (System.Exception ex)        {
+            var errorHandler = LoggingService.GetErrorHandler();
             errorHandler.HandleException(ex, "Mostrar registro de errores desde herramientas");
         }
     }

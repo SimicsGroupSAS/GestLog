@@ -2,7 +2,7 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 

@@ -6,7 +6,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using GestLog.Models.Validation;
-using GestLog.Services;
+using GestLog.Services.Validation;
+using GestLog.Services.Core.Logging;
 
 // Usar alias para evitar el conflicto de tipos
 using DataAnnotationsValidationResult = System.ComponentModel.DataAnnotations.ValidationResult;

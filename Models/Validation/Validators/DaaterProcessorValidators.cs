@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GestLog.Models.Configuration.Modules;
 using GestLog.Models.Validation;
+using GestLog.Services.Validation;
 
 namespace GestLog.Models.Validation.Validators
 {

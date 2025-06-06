@@ -13,7 +13,8 @@ using ClosedXML.Excel;
 using Ookii.Dialogs.Wpf;
 using System.Diagnostics;
 using GestLog.Modules.DaaterProccesor.Services;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
+using GestLog.Services.Core.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 

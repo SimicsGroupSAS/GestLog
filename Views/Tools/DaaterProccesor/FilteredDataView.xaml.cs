@@ -8,7 +8,7 @@ using System.Windows;
 using Microsoft.Win32;
 using ClosedXML.Excel;
 using GestLog.Modules.DaaterProccesor.Services;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.Views.Tools.DaaterProccesor
 {

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
-namespace GestLog.Services;
+namespace GestLog.Services.Core.Logging;
 
 /// <summary>
 /// Implementación del servicio de logging específico para GestLog

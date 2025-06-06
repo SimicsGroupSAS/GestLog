@@ -2,7 +2,7 @@ using System;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using GestLog.Services;
+using GestLog.Services.Core.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace GestLog.Modules.DaaterProccesor.Services;

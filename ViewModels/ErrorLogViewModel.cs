@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using GestLog.Services;
+using GestLog.Services.Core.Error;
+using GestLog.Services.Core.Logging;
 
 namespace GestLog.ViewModels
 {
