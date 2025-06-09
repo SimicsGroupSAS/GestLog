@@ -15,6 +15,13 @@ public class GeneratedPdfInfo
     public string RutaArchivo { get; set; } = string.Empty;
     public string NombreArchivo { get; set; } = string.Empty;
     public string TipoCartera { get; set; } = string.Empty;
+    
+    // Propiedades adicionales para el binding del DataGrid
+    public string CompanyName => NombreEmpresa;
+    public string FilePath => RutaArchivo;
+    public DateTime GeneratedDate { get; set; } = DateTime.Now;
+    public long FileSize { get; set; }
+    public int RecordCount { get; set; }
 }
 
 /// <summary>

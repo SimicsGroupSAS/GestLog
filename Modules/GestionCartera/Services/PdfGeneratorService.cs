@@ -633,13 +633,24 @@ public class PdfGeneratorService : IPdfGeneratorService
                 // Crear PDF directamente con iText7
                 CreatePdfDocument(clientName, nit, filteredRows, tienePositivos, pdfFilePath, templatePath);
                 
+                // Obtener información del archivo generado
+                long fileSize = 0;
+                if (System.IO.File.Exists(pdfFilePath))
+                {
+                    var fileInfo = new System.IO.FileInfo(pdfFilePath);
+                    fileSize = fileInfo.Length;
+                }
+                
                 var generatedPdf = new GeneratedPdfInfo
                 {
                     NombreEmpresa = clientName,
                     Nit = nit,
                     RutaArchivo = pdfFilePath,
                     NombreArchivo = pdfFileName,
-                    TipoCartera = tipoCartera
+                    TipoCartera = tipoCartera,
+                    GeneratedDate = DateTime.Now,
+                    FileSize = fileSize,
+                    RecordCount = filteredRows.Count
                 };
                 
                 _logger.LogInformation("📄 Documento generado para {ClientName} (NIT: {Nit}): {FileName}", 
