@@ -368,11 +368,14 @@ public partial class AutomaticEmailViewModel : ObservableObject
         IReadOnlyList<GeneratedPdfInfo> documents, 
         CancellationToken cancellationToken)
     {
-        if (_emailService == null || _excelEmailService == null) return false;
-
-        var emailsSent = 0;
+        if (_emailService == null || _excelEmailService == null) return false;        var emailsSent = 0;
         var emailsFailed = 0;
+        var orphansSent = 0;
         var totalEmails = documents.Count;
+
+        // Obtener la configuración BCC para documentos huérfanos
+        var smtpConfig = _emailService.CurrentConfiguration;
+        var bccEmail = smtpConfig?.BccEmail;
 
         foreach (var document in documents)
         {
@@ -386,20 +389,43 @@ public partial class AutomaticEmailViewModel : ObservableObject
                     SelectedEmailExcelFilePath, 
                     document.NombreEmpresa, 
                     document.Nit, 
-                    cancellationToken);
-
-                if (!emails.Any())
+                    cancellationToken);                if (!emails.Any())
                 {
-                    LogText += $" ⚠️ Sin email";
-                    emailsFailed++;
-                    continue;
-                }
+                    // Documento huérfano - enviar al BCC configurado si existe
+                    if (!string.IsNullOrWhiteSpace(bccEmail))
+                    {                        LogText += $" 📧 Sin Correo → BCC";
+                          var orphanEmailInfo = new EmailInfo
+                        {
+                            Recipients = new List<string> { bccEmail }, // Enviar al BCC como destinatario principal
+                            Subject = $"Estado de Cartera - Sin Correo Destinatario - {document.NombreEmpresa}",
+                            Body = GetOrphanEmailBodyWithSignature(document.NombreEmpresa, document.Nit),
+                            IsBodyHtml = true
+                        };
 
-                var emailInfo = new EmailInfo
+                        var orphanResult = await _emailService.SendEmailWithAttachmentAsync(orphanEmailInfo, document.RutaArchivo, cancellationToken);
+                        
+                        if (orphanResult.IsSuccess)
+                        {
+                            orphansSent++;
+                            LogText += $" ✅ Enviado al BCC";
+                        }
+                        else
+                        {
+                            emailsFailed++;
+                            LogText += $" ❌ Error BCC: {orphanResult.Message}";
+                        }
+                    }
+                    else
+                    {
+                        LogText += $" ⚠️ Sin email y sin BCC configurado";
+                        emailsFailed++;
+                    }
+                    continue;
+                }                var emailInfo = new EmailInfo
                 {
                     Recipients = emails.ToList(),
-                    Subject = $"Estado de Cartera - {document.NombreEmpresa}",
-                    Body = _emailService.GetEmailHtmlTemplate($"Estimado cliente,<br/><br/>Adjuntamos el estado de cartera correspondiente a su empresa <strong>{document.NombreEmpresa}</strong>.<br/><br/>Para cualquier consulta, no dude en contactarnos.<br/><br/>Cordialmente,"),
+                    Subject = "Estado de Cartera - Documentos",
+                    Body = GetCompleteEmailBodyWithSignature(),
                     IsBodyHtml = true
                 };
 
@@ -421,15 +447,17 @@ public partial class AutomaticEmailViewModel : ObservableObject
                 emailsFailed++;
                 LogText += $" ❌ Error: {ex.Message}";
             }
+        }        LogText += $"\n📊 Resumen final: {emailsSent}/{totalEmails} emails enviados exitosamente";
+        if (orphansSent > 0)
+        {
+            LogText += $", {orphansSent} sin correo al BCC";
         }
-
-        LogText += $"\n📊 Resumen final: {emailsSent}/{totalEmails} emails enviados exitosamente";
         if (emailsFailed > 0)
         {
             LogText += $", {emailsFailed} fallos";
         }
 
-        return emailsSent > 0;
+        return emailsSent > 0 || orphansSent > 0;
     }
 
     /// <summary>
@@ -465,7 +493,357 @@ public partial class AutomaticEmailViewModel : ObservableObject
     public void Cleanup()
     {
         // Limpiar recursos si es necesario
-    }    // Este comando será llamado desde el MainViewModel con el parámetro correcto
+    }
+
+    /// <summary>
+    /// Genera el cuerpo completo del email con toda la firma HTML (idéntico al proyecto de implementación)
+    /// </summary>
+    private string GetCompleteEmailBodyWithSignature()
+    {
+        return @"<div style='font-family: Arial, sans-serif; line-height: 1.6; text-align: justify;'>
+<p>Para SIMICS GROUP S.A.S. es muy importante contar con clientes como usted e informar constantemente la situación de cartera que tenemos a la fecha.</p>
+
+<p>Adjuntamos estado de cuenta, en caso de tener alguna factura vencida agradecemos su colaboración con la programación de pagos.</p>
+
+<p>Si tiene alguna observación agradecemos informarla por este medio para su revisión.</p>
+
+<p>En caso de no ser la persona encargada agradecemos enviar este mensaje al responsable o compartirnos su correo electrónico para enviarle este comunicado.</p>
+
+<p>Muchas gracias por su ayuda.</p>
+
+<p>Cordialmente,</p>
+
+<table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+  <tbody>
+    <tr>
+      <td>
+        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;width:385px'>
+          <tbody>
+            <tr>
+              <td width='80' style='vertical-align:middle'>
+                <span style='margin-right:20px;display:block'>
+                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/Logo-v6_Icono2021Firma.png' role='presentation' width='80' style='max-width:80px'>
+                </span>
+              </td>
+              <td style='vertical-align:middle'>
+                <h3 style='margin:0;font-size:14px;color:#000'>
+                  <span>JUAN MANUEL</span> <span>CUERVO PINILLA</span>
+                </h3>
+                <p style='margin:0;font-weight:500;color:#000;font-size:12px;line-height:15px'>
+                  <span>Gerente Financiero</span>
+                </p>
+                <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                  <tbody>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image002.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <a href='tel:+34654623277' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>+34-654623277</span>
+                        </a> |
+                        <a href='tel:+573163114545' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>+57-3163114545</span>
+                        </a>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image003.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <a href='mailto:juan.cuervo@simicsgroup.com' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>juan.cuervo@simicsgroup.com</span>
+                        </a>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image004.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <span style='font-size:11px;color:#000'>
+                          <span>CR 53 No. 96-24 Oficina 3D</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'></td>
+                      <td style='padding:0;color:#000'>
+                        <span style='font-size:11px;color:#000'>
+                          <span>Barranquilla, Colombia</span>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;width:385px'>
+          <tbody>
+            <tr height='60' style='vertical-align:middle'>
+              <th style='width:100%'>
+                <img src='http://simicsgroup.com/wp-content/uploads/2023/08/Logo-v6_2021-1Firma.png' width='200' style='max-width:200px;display:inline-block'>
+              </th>
+            </tr>
+            <tr height='25' style='text-align:center'>
+              <td style='width:100%'>
+                <a href='https://www.simicsgroup.com/' style='text-decoration:none;color:#000;font-size:11px;text-align:center'>
+                  <span>www.simicsgroup.com</span>
+                </a>
+              </td>
+            </tr>
+            <tr height='25' style='text-align:center'>
+              <td style='text-align:center;vertical-align:top'>
+                <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;display:inline-block'>
+                  <tbody>
+                    <tr style='text-align:right'>
+                      <td>
+                        <a href='https://www.linkedin.com/company/simicsgroupsas' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image006.png' alt='linkedin' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                      <td>
+                        <a href='https://www.instagram.com/simicsgroupsas/' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image007.png' alt='instagram' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                      <td>
+                        <a href='https://www.facebook.com/SIMICSGroupSAS/' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image008.png' alt='facebook' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>";    }    /// <summary>
+    /// Genera el cuerpo de email para documentos sin correo destinatario con firma completa
+    /// </summary>
+    private string GetOrphanEmailBodyWithSignature(string empresaName, string nit)
+    {
+        return @"<div style='font-family: Arial, sans-serif; line-height: 1.6; text-align: justify;'>
+<p><strong>DOCUMENTOS SIN CORREO ELECTRÓNICO DESTINATARIO</strong></p>
+
+<p>Se adjuntan los documentos de estado de cartera para los cuales no se encontró correo electrónico registrado:</p>
+
+<p>Empresa: <strong>" + empresaName + @"</strong><br/>
+NIT: " + nit + @"</p>
+
+<p>Cordialmente,</p>
+
+<table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+  <tbody>
+    <tr>
+      <td>
+        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;width:385px'>
+          <tbody>
+            <tr>
+              <td width='80' style='vertical-align:middle'>
+                <span style='margin-right:20px;display:block'>
+                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/Logo-v6_Icono2021Firma.png' role='presentation' width='80' style='max-width:80px'>
+                </span>
+              </td>
+              <td style='vertical-align:middle'>
+                <h3 style='margin:0;font-size:14px;color:#000'>
+                  <span>JUAN MANUEL</span> <span>CUERVO PINILLA</span>
+                </h3>
+                <p style='margin:0;font-weight:500;color:#000;font-size:12px;line-height:15px'>
+                  <span>Gerente Financiero</span>
+                </p>
+                <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                  <tbody>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image002.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <a href='tel:+34654623277' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>+34-654623277</span>
+                        </a> |
+                        <a href='tel:+573163114545' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>+57-3163114545</span>
+                        </a>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image003.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <a href='mailto:juan.cuervo@simicsgroup.com' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>juan.cuervo@simicsgroup.com</span>
+                        </a>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image004.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <span style='font-size:11px;color:#000'>
+                          <span>CR 53 No. 96-24 Oficina 3D</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'></td>
+                      <td style='padding:0;color:#000'>
+                        <span style='font-size:11px;color:#000'>
+                          <span>Barranquilla, Colombia</span>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;width:385px'>
+          <tbody>
+            <tr height='60' style='vertical-align:middle'>
+              <th style='width:100%'>
+                <img src='http://simicsgroup.com/wp-content/uploads/2023/08/Logo-v6_2021-1Firma.png' width='200' style='max-width:200px;display:inline-block'>
+              </th>
+            </tr>
+            <tr height='25' style='text-align:center'>
+              <td style='width:100%'>
+                <a href='https://www.simicsgroup.com/' style='text-decoration:none;color:#000;font-size:11px;text-align:center'>
+                  <span>www.simicsgroup.com</span>
+                </a>
+              </td>
+            </tr>
+            <tr height='25' style='text-align:center'>
+              <td style='text-align:center;vertical-align:top'>
+                <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;display:inline-block'>
+                  <tbody>
+                    <tr style='text-align:right'>
+                      <td>
+                        <a href='https://www.linkedin.com/company/simicsgroupsas' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image006.png' alt='linkedin' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                      <td>
+                        <a href='https://www.instagram.com/simicsgroupsas/' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image007.png' alt='instagram' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                      <td>
+                        <a href='https://www.facebook.com/SIMICSGroupSAS/' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image008.png' alt='facebook' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>";
+    }
+
+    // Este comando será llamado desde el MainViewModel con el parámetro correcto
     public async Task<bool> SendDocumentsAutomaticallyWithConfig(SmtpConfigurationViewModel smtpConfig)
     {
         return await SendDocumentsAutomaticallyAsync(GeneratedDocuments, smtpConfig);
