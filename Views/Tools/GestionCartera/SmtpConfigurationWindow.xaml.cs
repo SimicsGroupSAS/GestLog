@@ -32,8 +32,7 @@ namespace GestLog.Views.Tools.GestionCartera
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
             _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-              try
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));            try
             {
                 InitializeComponent();
                 
@@ -42,16 +41,15 @@ namespace GestLog.Views.Tools.GestionCartera
                 _logger?.LogInformation("Configuración SMTP encontrada: Server={Server}, IsConfigured={IsConfigured}", 
                     _currentSettings.Server ?? "", _currentSettings.IsConfigured);
                 
-                // Suscribirse al evento Loaded para cargar la configuración cuando la ventana esté completamente inicializada
+                // Suscribirse al evento Loaded SOLO para cargar la configuración cuando la ventana esté completamente inicializada
                 this.Loaded += (sender, e) => {
                     _logger?.LogInformation("🔄 Ventana cargada, ejecutando LoadConfigurationToUI()");
                     LoadConfigurationToUI();
                     UpdateUI();
                 };
                 
-                // Intentar cargar inmediatamente también (en caso de que ya esté cargada)
-                LoadConfigurationToUI();
-                UpdateUI();
+                // NO cargar inmediatamente - esperar a que la ventana se cargue completamente
+                _logger?.LogInformation("Constructor SmtpConfigurationWindow completado - esperando evento Loaded");
             }
             catch (Exception ex)
             {
@@ -187,18 +185,40 @@ namespace GestLog.Views.Tools.GestionCartera
                 sslCheckBox.IsChecked = true;
                 UpdateStatus("Configuración de Office 365 aplicada", Colors.Orange);
                 _logger?.LogInformation("Aplicada configuración predefinida: Office 365");
-            }
-        }        private void LoadConfigurationToUI()
+            }        }
+
+        private bool _isLoadingConfiguration = false;
+        
+        private void LoadConfigurationToUI()
         {
             try
             {
-                _logger?.LogInformation("🔄 INICIO LoadConfigurationToUI()");
+                // Protección contra múltiples ejecuciones simultáneas
+                if (_isLoadingConfiguration)
+                {
+                    _logger?.LogInformation("🔄 LoadConfigurationToUI() ya está en ejecución, saltando...");
+                    return;
+                }
+
+                _isLoadingConfiguration = true;
+
+                // Obtener la configuración más actualizada desde el servicio
+                var latestConfig = _configurationService?.Current?.Smtp;
+                if (latestConfig != null)
+                {
+                    _currentSettings = latestConfig;
+                }
+
+                _logger?.LogInformation("🔄 INICIO LoadConfigurationToUI() - StackTrace: {StackTrace}", 
+                    new System.Diagnostics.StackTrace().ToString().Split('\n')[1].Trim());
                 _logger?.LogInformation("🔍 DATOS RECIBIDOS: Server='{Server}', Username='{Username}', Port={Port}, UseSSL={UseSSL}, IsConfigured={IsConfigured}", 
-                    _currentSettings?.Server ?? "[NULL]", _currentSettings?.Username ?? "[NULL]", _currentSettings?.Port ?? 0, _currentSettings?.UseSSL ?? false, _currentSettings?.IsConfigured ?? false);                if (_currentSettings == null) 
+                    _currentSettings?.Server ?? "[NULL]", _currentSettings?.Username ?? "[NULL]", _currentSettings?.Port ?? 0, _currentSettings?.UseSSL ?? false, _currentSettings?.IsConfigured ?? false);
+                    
+                if (_currentSettings == null) 
                 {
                     _logger?.LogWarning("⚠️ SALIENDO: CurrentSettings es null");
                     return;
-                }                var hostTextBox = this.FindName("HostTextBox") as System.Windows.Controls.TextBox;
+                }var hostTextBox = this.FindName("HostTextBox") as System.Windows.Controls.TextBox;
                 var portTextBox = this.FindName("PortTextBox") as System.Windows.Controls.TextBox;
                 var sslCheckBox = this.FindName("SslCheckBox") as System.Windows.Controls.CheckBox;
                 var emailTextBox = this.FindName("EmailTextBox") as System.Windows.Controls.TextBox;
@@ -240,15 +260,31 @@ namespace GestLog.Views.Tools.GestionCartera
                     emailTextBox.Text = _currentSettings.Username ?? string.Empty;
                     _logger?.LogInformation("🔄 EmailTextBox asignado: '{Value}'", emailTextBox.Text);
                 }                // Cargar campos BCC y CC desde la configuración
+                _logger?.LogInformation("📧 CARGANDO CAMPOS BCC/CC:");
+                _logger?.LogInformation("   💭 BccEmail en configuración: '{BccValue}'", _currentSettings.BccEmail ?? "[NULL]");
+                _logger?.LogInformation("   💭 CcEmail en configuración: '{CcValue}'", _currentSettings.CcEmail ?? "[NULL]");
+                _logger?.LogInformation("   🔍 BccEmailTextBox encontrado: {BccFound}", bccEmailTextBox != null);
+                _logger?.LogInformation("   🔍 CcEmailTextBox encontrado: {CcFound}", ccEmailTextBox != null);
+                
                 if (bccEmailTextBox != null)
                 {
-                    bccEmailTextBox.Text = _currentSettings.BccEmail ?? string.Empty;
-                    _logger?.LogInformation("🔄 BccEmailTextBox asignado: '{Value}'", bccEmailTextBox.Text);
+                    var bccValue = _currentSettings.BccEmail ?? string.Empty;
+                    bccEmailTextBox.Text = bccValue;
+                    _logger?.LogInformation("🔄 BccEmailTextBox asignado: '{AssignedValue}' (length: {Length})", bccValue, bccValue.Length);
+                    
+                    // Verificar que la asignación fue exitosa
+                    var verifyBcc = bccEmailTextBox.Text;
+                    _logger?.LogInformation("🔍 BccEmailTextBox verificación: '{VerifyValue}' - Match: {IsMatch}", verifyBcc, verifyBcc == bccValue);
+                }
+                else
+                {
+                    _logger?.LogWarning("⚠️ BccEmailTextBox es NULL - no se puede asignar valor");
                 }
 
                 if (ccEmailTextBox != null)
                 {
-                    ccEmailTextBox.Text = _currentSettings.CcEmail ?? string.Empty;
+                    var ccValue = _currentSettings.CcEmail ?? string.Empty;
+                    ccEmailTextBox.Text = ccValue;
                     _logger?.LogInformation("🔄 CcEmailTextBox asignado: '{Value}'", ccEmailTextBox.Text);
                 }// Cargar credenciales guardadas si existen
                 if (_currentSettings.UseAuthentication && !string.IsNullOrEmpty(_currentSettings.Username))
@@ -280,9 +316,7 @@ namespace GestLog.Views.Tools.GestionCartera
                         _logger?.LogWarning("⚠️ No se cargarán credenciales: UseAuthentication={UseAuth}, Username vacio={IsEmpty}", 
                             _currentSettings.UseAuthentication, string.IsNullOrEmpty(_currentSettings.Username));
                     }
-                }
-
-                UpdateStatus(_currentSettings.IsConfigured ? "Configuración cargada" : "No configurado",
+                }                UpdateStatus(_currentSettings.IsConfigured ? "Configuración cargada" : "No configurado",
                            _currentSettings.IsConfigured ? Colors.Green : Colors.Red);
                 
                 _logger?.LogInformation("Configuración SMTP cargada en UI - Server: {Server}, Username: {Username}, Configurado: {IsConfigured}", 
@@ -292,6 +326,11 @@ namespace GestLog.Views.Tools.GestionCartera
             {
                 _logger?.LogError(ex, "Error al cargar configuración a la UI");
                 UpdateStatus("Error al cargar configuración", Colors.Red);
+            }
+            finally
+            {
+                _isLoadingConfiguration = false;
+                _logger?.LogInformation("🔄 LoadConfigurationToUI() completado");
             }
         }
 

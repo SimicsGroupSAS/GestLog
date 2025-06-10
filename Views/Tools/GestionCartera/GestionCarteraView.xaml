@@ -338,76 +338,32 @@
                                 </Button>
                             </StackPanel>
                         </Border>
-                    </Grid>
-                </TabItem>
-
-                <!-- Tab: Resultados -->
-                <TabItem Header="📊 Resultados" FontSize="14" Padding="15,8">
-                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Summary -->
-                        <Border Grid.Row="0" Background="#D5DBDB" Padding="20" CornerRadius="5" Margin="0,0,0,20">
-                            <DockPanel>
-                                <TextBlock Text="📈 Resumen de Generación" 
-                                          FontSize="16" FontWeight="SemiBold" 
-                                          Foreground="#2C3E50" DockPanel.Dock="Top"
-                                          Margin="0,0,0,10"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding GeneratedDocuments.Count, StringFormat='Documentos generados: {0}'}" 
-                                              FontWeight="SemiBold" Foreground="#27AE60" Margin="0,0,20,0"/>
-                                    <TextBlock Text="📁 Ubicación: " Foreground="#7F8C8D"/>
-                                    <TextBlock Text="{Binding OutputFolderPath}" Foreground="#34495E"/>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- Generated Documents List -->
-                        <Border Grid.Row="1" Background="#F8F9FA" CornerRadius="5">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="📄 Documentos Generados:" 
-                                          FontWeight="SemiBold" Foreground="#2C3E50" 
-                                          Padding="15,15,15,10"/>
-                                <DataGrid ItemsSource="{Binding GeneratedDocuments}" 
-                                         AutoGenerateColumns="False" 
-                                         IsReadOnly="True"
-                                         Background="White"
-                                         RowBackground="White"
-                                         AlternatingRowBackground="#F8F9FA"
-                                         GridLinesVisibility="Horizontal"
-                                         HeadersVisibility="Column"
-                                         Margin="15,0,15,15">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Empresa" Binding="{Binding CompanyName}" Width="*"/>                                        <DataGridTextColumn Header="Archivo" Binding="{Binding FilePath, Converter={StaticResource PathToFileNameConverter}}" Width="200"/>
-                                        <DataGridTextColumn Header="Fecha" Binding="{Binding GeneratedDate, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="120"/>
-                                        <DataGridTextColumn Header="Tamaño" Binding="{Binding FileSize, Converter={StaticResource FileSizeConverter}}" Width="80"/>
-                                        <DataGridTextColumn Header="Registros" Binding="{Binding RecordCount}" Width="80"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
-                </TabItem>                <!-- Tab: Envío de Correos -->
-                <TabItem Header="📧 Envío de Correos" FontSize="14" Padding="15,8">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">                        <Grid Margin="20">
+                    </Grid>                </TabItem>
+                  <!-- Tab: Envío Automático -->
+                <TabItem Header="🚀 Envío Automático" FontSize="14" Padding="15,8">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions><!-- Estado y Configuración SMTP -->
-                            <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
+                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Configuración SMTP -->
+                            <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Información de Estado -->
+                                    <!-- Información de Estado SMTP -->
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="⚙️ Configuración del Servidor SMTP" 
                                                   FontSize="16" FontWeight="SemiBold" 
@@ -422,7 +378,9 @@
                                             </Ellipse>
                                             <TextBlock Text="{Binding IsEmailConfigured, Converter={StaticResource BooleanToStatusTextConverter}}" 
                                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        </StackPanel>                                        <!-- Información básica -->
+                                        </StackPanel>
+
+                                        <!-- Información básica -->
                                         <Grid Margin="0,0,0,10" 
                                              Visibility="{Binding IsEmailConfigured, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <Grid.ColumnDefinitions>
@@ -460,12 +418,15 @@
                                                       FontSize="11" Foreground="#27AE60" FontStyle="Italic"/>
                                         </Grid>
 
-                                        <TextBlock Text="Configure el servidor SMTP para habilitar el envío de correos electrónicos"
+                                        <TextBlock Text="Configure el servidor SMTP para habilitar el envío automático de correos electrónicos"
                                                   FontSize="11" Foreground="#7F8C8D"
                                                   Visibility="{Binding IsEmailConfigured, Converter={StaticResource InverseBooleanConverter}, ConverterParameter=Visibility}"/>
-                                    </StackPanel>                                    <!-- Botones de Configuración -->
+                                    </StackPanel>
+
+                                    <!-- Botones de Configuración SMTP -->
                                     <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right">
-                                        <!-- Botón Principal de Configuración -->                                        <Button Content="⚙️ Configurar SMTP" 
+                                        <!-- Botón Principal de Configuración -->
+                                        <Button Content="⚙️ Configurar SMTP" 
                                                Background="#E67E22" Foreground="White"
                                                Padding="25,15" BorderThickness="0" FontWeight="Bold"
                                                FontSize="16"
@@ -486,7 +447,8 @@
                                             </Button.Style>
                                         </Button>
                                         
-                                        <!-- Botón de Test Rápido -->                                        <Button Content="🧪 Probar Conexión" 
+                                        <!-- Botón de Test Rápido -->
+                                        <Button Content="🧪 Probar Conexión" 
                                                Background="#3498DB" Foreground="White"
                                                Padding="15,8" BorderThickness="0" FontWeight="SemiBold"
                                                FontSize="12"
@@ -510,159 +472,8 @@
                                         </Button>
                                     </StackPanel>
                                 </Grid>
-                            </Border>                            <!-- Información del Correo -->
-                            <Border Grid.Row="2" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
-                                <StackPanel>
-                                    <TextBlock Text="✉️ Información del Correo" 
-                                              FontSize="16" FontWeight="SemiBold" 
-                                              Foreground="#2C3E50" Margin="0,0,0,15"/>
-                                    
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="10"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="10"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="10"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="10"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="20"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Destinatarios -->
-                                        <StackPanel Grid.Row="0" Grid.Column="0">
-                                            <TextBlock Text="Destinatarios (Para):" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <TextBox Text="{Binding EmailRecipients, UpdateSourceTrigger=PropertyChanged}" 
-                                                    Padding="8" BorderBrush="#BDC3C7"
-                                                    ToolTip="Separar múltiples direcciones con punto y coma (;)"/>
-                                        </StackPanel>
-
-                                        <!-- Asunto -->
-                                        <StackPanel Grid.Row="0" Grid.Column="2">
-                                            <TextBlock Text="Asunto:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <TextBox Text="{Binding EmailSubject, UpdateSourceTrigger=PropertyChanged}" 
-                                                    Padding="8" BorderBrush="#BDC3C7"/>
-                                        </StackPanel>
-
-                                        <!-- CC -->
-                                        <StackPanel Grid.Row="2" Grid.Column="0">
-                                            <TextBlock Text="Copia (CC):" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <TextBox Text="{Binding EmailCc, UpdateSourceTrigger=PropertyChanged}" 
-                                                    Padding="8" BorderBrush="#BDC3C7"
-                                                    ToolTip="Separar múltiples direcciones con punto y coma (;)"/>
-                                        </StackPanel>
-
-                                        <!-- BCC -->
-                                        <StackPanel Grid.Row="2" Grid.Column="2">
-                                            <TextBlock Text="Copia Oculta (BCC):" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <TextBox Text="{Binding EmailBcc, UpdateSourceTrigger=PropertyChanged}" 
-                                                    Padding="8" BorderBrush="#BDC3C7"
-                                                    ToolTip="Separar múltiples direcciones con punto y coma (;)"/>
-                                        </StackPanel>
-
-                                        <!-- Cuerpo del mensaje -->
-                                        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3">
-                                            <TextBlock Text="Mensaje:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <TextBox Text="{Binding EmailBody, UpdateSourceTrigger=PropertyChanged}" 
-                                                    TextWrapping="Wrap" AcceptsReturn="True"
-                                                    Height="100" Padding="8" BorderBrush="#BDC3C7"
-                                                    VerticalScrollBarVisibility="Auto"/>
-                                        </StackPanel>
-
-                                        <!-- Opciones -->
-                                        <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal">
-                                            <CheckBox IsChecked="{Binding UseHtmlEmail}" 
-                                                     Content="Usar formato HTML" 
-                                                     FontWeight="SemiBold" Margin="0,0,20,0"
-                                                     ToolTip="Activar para enviar correos con formato profesional"/>
-                                        </StackPanel>
-
-                                        <!-- Botones de envío -->
-                                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3" 
-                                                   Orientation="Horizontal" HorizontalAlignment="Right">
-                                            <Button Content="🔍 Enviar Prueba" 
-                                                   Background="#F39C12" Foreground="White"
-                                                   Padding="15,8" BorderThickness="0" FontWeight="SemiBold"
-                                                   Margin="0,0,10,0"
-                                                   Command="{Binding SendTestEmailCommand}"
-                                                   IsEnabled="{Binding IsSendingEmail, Converter={StaticResource InverseBooleanConverter}}"
-                                                   ToolTip="Enviar un correo de prueba para verificar la configuración"/>
-                                            
-                                            <Button Content="📧 Enviar Documentos" 
-                                                   Background="#27AE60" Foreground="White"
-                                                   Padding="15,8" BorderThickness="0" FontWeight="SemiBold"
-                                                   Command="{Binding SendDocumentsByEmailCommand}"
-                                                   IsEnabled="{Binding IsSendingEmail, Converter={StaticResource InverseBooleanConverter}}"
-                                                   ToolTip="Enviar todos los documentos generados por correo electrónico"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>                            <!-- Estado del proceso de envío -->
-                            <Border Grid.Row="3" Background="#ECF0F1" Padding="20" CornerRadius="5" Margin="0,0,0,20"
-                                   Visibility="{Binding IsSendingEmail, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <DockPanel Margin="0,0,0,10">
-                                        <TextBlock Text="📤 Enviando correos..." FontWeight="SemiBold" 
-                                                  Foreground="#2C3E50" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="{Binding StatusMessage}" 
-                                                  Foreground="#34495E" HorizontalAlignment="Right"/>
-                                    </DockPanel>
-                                    
-                                    <ProgressBar IsIndeterminate="True" 
-                                               Height="20" Background="#BDC3C7" 
-                                               Foreground="#3498DB" BorderThickness="0"/>
-                                </StackPanel>
-                            </Border>                            <!-- Panel de ayuda -->
-                            <Border Grid.Row="4" Background="#E8F6F3" Padding="20" CornerRadius="5" BorderBrush="#52C9A0" BorderThickness="1">
-                                <StackPanel>
-                                    <TextBlock Text="💡 Consejos para el Envío de Correos" 
-                                              FontSize="16" FontWeight="SemiBold" 
-                                              Foreground="#1E8449" Margin="0,0,0,15"/>
-                                    
-                                    <TextBlock TextWrapping="Wrap" Foreground="#1E8449" LineHeight="20">
-                                        <Run Text="• "/>
-                                        <Run Text="Para Gmail: Usa una contraseña de aplicación en lugar de tu contraseña personal"/>
-                                        <LineBreak/>
-                                        <Run Text="• "/>
-                                        <Run Text="Para Outlook: Servidor smtp-mail.outlook.com, puerto 587"/>
-                                        <LineBreak/>
-                                        <Run Text="• "/>
-                                        <Run Text="Separa múltiples destinatarios con punto y coma (;)"/>
-                                        <LineBreak/>
-                                        <Run Text="• "/>
-                                        <Run Text="Siempre prueba la configuración antes de enviar documentos"/>
-                                        <LineBreak/>
-                                        <Run Text="• "/>
-                                        <Run Text="Los documentos se adjuntarán automáticamente al correo"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </ScrollViewer>
-                </TabItem>
-                
-                <!-- Tab: Envío Automático -->
-                <TabItem Header="🚀 Envío Automático" FontSize="14" Padding="15,8">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="20">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- Título -->
-                            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            </Border>                            <!-- Título -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal">
                                 <TextBlock Text="🚀 Envío Automático de Documentos" 
                                           FontSize="16" FontWeight="Bold" 
                                           Foreground="#2E7D32" Margin="0,0,10,0"/>
@@ -672,7 +483,7 @@
                             </StackPanel>
 
                             <!-- Selección de Excel de correos -->
-                            <Grid Grid.Row="2">
+                            <Grid Grid.Row="4">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="15"/>
@@ -729,10 +540,8 @@
                                               Foreground="#F44336" FontSize="11" FontStyle="Italic"
                                               Visibility="{Binding HasEmailExcel, Converter={StaticResource InverseBooleanConverter}, ConverterParameter=Visibility}"/>
                                 </StackPanel>
-                            </Grid>
-
-                            <!-- Descripción del proceso -->
-                            <Border Grid.Row="4" Background="#F1F8E9" Padding="15" CornerRadius="5" BorderBrush="#8BC34A" BorderThickness="1">
+                            </Grid>                            <!-- Descripción del proceso -->
+                            <Border Grid.Row="6" Background="#F1F8E9" Padding="15" CornerRadius="5" BorderBrush="#8BC34A" BorderThickness="1">
                                 <StackPanel>
                                     <TextBlock Text="🔄 ¿Cómo funciona el Envío Automático?" 
                                               FontWeight="SemiBold" Foreground="#33691E" Margin="0,0,0,8"/>
@@ -754,7 +563,7 @@
                                     </TextBlock>
                                 </StackPanel>
                             </Border>                            <!-- Botón de envío automático -->
-                            <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="🚀 Enviar Documentos Automáticamente"
                                        Background="#4CAF50" Foreground="White"
                                        Padding="25,12" BorderThickness="0" FontWeight="Bold"

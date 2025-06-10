@@ -220,9 +220,7 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             IsEmailConfigured = false;
             SmtpPassword = string.Empty;
         }
-    }
-
-    private async Task SaveSmtpConfigurationAsync()
+    }    private async Task SaveSmtpConfigurationAsync()
     {
         try
         {
@@ -233,8 +231,13 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             smtpConfig.Port = SmtpPort;
             smtpConfig.Username = SmtpUsername;
             smtpConfig.FromEmail = SmtpUsername;
+            smtpConfig.FromName = SmtpUsername;
             smtpConfig.UseSSL = EnableSsl;
             smtpConfig.UseAuthentication = !string.IsNullOrWhiteSpace(SmtpUsername);
+            
+            // ✅ CORRECCIÓN: Mantener campos BCC y CC existentes si ya están configurados
+            // Solo actualizamos si no están ya configurados para no sobrescribir valores existentes
+            // Los campos BCC y CC se configuran desde la ventana de configuración avanzada
 
             // Guardar contraseña de forma segura
             if (!string.IsNullOrWhiteSpace(SmtpUsername) && !string.IsNullOrWhiteSpace(SmtpPassword))
@@ -251,7 +254,7 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             _logger.LogError(ex, "Error al guardar configuración SMTP");
             throw;
         }
-    }    private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
+    }private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
     {
         if (e.SettingPath.StartsWith("smtp", StringComparison.OrdinalIgnoreCase))
         {
