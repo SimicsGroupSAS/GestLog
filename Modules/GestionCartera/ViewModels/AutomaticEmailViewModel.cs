@@ -424,7 +424,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
                 }                var emailInfo = new EmailInfo
                 {
                     Recipients = emails.ToList(),
-                    Subject = "Estado de Cartera - Documentos",
+                    Subject = "Estado Cartera - SIMICS GROUP S.A.S",
                     Body = GetCompleteEmailBodyWithSignature(),
                     IsBodyHtml = true
                 };
