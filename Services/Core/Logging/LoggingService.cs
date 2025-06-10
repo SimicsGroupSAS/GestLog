@@ -76,6 +76,8 @@ public static class LoggingService
                 Modules.GestionCartera.Services.PdfGeneratorService>();
             services.AddTransient<Modules.GestionCartera.Services.IEmailService, 
                 Modules.GestionCartera.Services.EmailService>();
+            services.AddTransient<Modules.GestionCartera.Services.IExcelEmailService, 
+                Modules.GestionCartera.Services.ExcelEmailService>();
             
             // ViewModels
             services.AddTransient<Modules.GestionCartera.ViewModels.DocumentGenerationViewModel>();

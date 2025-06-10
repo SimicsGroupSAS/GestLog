@@ -118,12 +118,39 @@
                                     Padding="10" BorderBrush="#BDC3C7" 
                                     FontSize="12" Margin="0,0,0,10"
                                     PasswordChanged="OnPasswordChanged"/>
-                        
-                        <!-- Guardar credenciales -->
+                          <!-- Guardar credenciales -->
                         <CheckBox x:Name="SaveCredentialsCheckBox" 
                                  Content="💾 Guardar credenciales de forma segura" 
                                  FontWeight="SemiBold" IsChecked="True"
                                  ToolTip="Las credenciales se almacenarán en Windows Credential Manager"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Configuración de Copias -->
+                <Border Background="#F8F9FA" Padding="15" CornerRadius="5" Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock Text="📧 Configuración de Copias" 
+                                  FontSize="14" FontWeight="SemiBold" 
+                                  Foreground="#2C3E50" Margin="0,0,0,15"/>
+                        
+                        <!-- BCC Email -->
+                        <TextBlock Text="Copia Oculta (BCC):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <TextBox x:Name="BccEmailTextBox" 
+                                Padding="10" BorderBrush="#BDC3C7" 
+                                FontSize="12" Margin="0,0,0,15"
+                                TextChanged="OnFieldChanged"
+                                ToolTip="Correo que recibirá copia oculta de todos los envíos (opcional)"/>
+
+                        <!-- CC Email -->
+                        <TextBlock Text="Copia (CC):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <TextBox x:Name="CcEmailTextBox" 
+                                Padding="10" BorderBrush="#BDC3C7" 
+                                FontSize="12" Margin="0,0,0,10"
+                                TextChanged="OnFieldChanged"
+                                ToolTip="Correo que recibirá copia de todos los envíos (opcional)"/>
+                        
+                        <TextBlock Text="💡 Las copias se aplicarán automáticamente en todos los envíos" 
+                                  FontSize="11" Foreground="#7F8C8D" FontStyle="Italic"/>
                     </StackPanel>
                 </Border>
 

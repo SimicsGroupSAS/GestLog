@@ -198,14 +198,14 @@ namespace GestLog.Views.Tools.GestionCartera
                 {
                     _logger?.LogWarning("⚠️ SALIENDO: CurrentSettings es null");
                     return;
-                }
-
-                var hostTextBox = this.FindName("HostTextBox") as System.Windows.Controls.TextBox;
+                }                var hostTextBox = this.FindName("HostTextBox") as System.Windows.Controls.TextBox;
                 var portTextBox = this.FindName("PortTextBox") as System.Windows.Controls.TextBox;
                 var sslCheckBox = this.FindName("SslCheckBox") as System.Windows.Controls.CheckBox;
                 var emailTextBox = this.FindName("EmailTextBox") as System.Windows.Controls.TextBox;
                 var passwordBox = this.FindName("PasswordBox") as System.Windows.Controls.PasswordBox;
                 var saveCredentialsCheckBox = this.FindName("SaveCredentialsCheckBox") as System.Windows.Controls.CheckBox;
+                var bccEmailTextBox = this.FindName("BccEmailTextBox") as System.Windows.Controls.TextBox;
+                var ccEmailTextBox = this.FindName("CcEmailTextBox") as System.Windows.Controls.TextBox;
 
                 // Verificar que los controles críticos existan antes de continuar
                 if (hostTextBox == null || emailTextBox == null)
@@ -235,12 +235,22 @@ namespace GestLog.Views.Tools.GestionCartera
                     sslCheckBox.IsChecked = _currentSettings.UseSSL;
                     _logger?.LogInformation("🔄 SslCheckBox asignado: {Value}", sslCheckBox.IsChecked);
                 }
-                
-                if (emailTextBox != null)
+                  if (emailTextBox != null)
                 {
                     emailTextBox.Text = _currentSettings.Username ?? string.Empty;
                     _logger?.LogInformation("🔄 EmailTextBox asignado: '{Value}'", emailTextBox.Text);
-                }                // Cargar credenciales guardadas si existen
+                }                // Cargar campos BCC y CC desde la configuración
+                if (bccEmailTextBox != null)
+                {
+                    bccEmailTextBox.Text = _currentSettings.BccEmail ?? string.Empty;
+                    _logger?.LogInformation("🔄 BccEmailTextBox asignado: '{Value}'", bccEmailTextBox.Text);
+                }
+
+                if (ccEmailTextBox != null)
+                {
+                    ccEmailTextBox.Text = _currentSettings.CcEmail ?? string.Empty;
+                    _logger?.LogInformation("🔄 CcEmailTextBox asignado: '{Value}'", ccEmailTextBox.Text);
+                }// Cargar credenciales guardadas si existen
                 if (_currentSettings.UseAuthentication && !string.IsNullOrEmpty(_currentSettings.Username))
                 {
                     var credentialTarget = $"SMTP_{_currentSettings.Server}_{_currentSettings.Username}";
@@ -408,49 +418,54 @@ namespace GestLog.Views.Tools.GestionCartera
 
                 var hostTextBox = this.FindName("HostTextBox") as System.Windows.Controls.TextBox;
                 var portTextBox = this.FindName("PortTextBox") as System.Windows.Controls.TextBox;
-                var sslCheckBox = this.FindName("SslCheckBox") as System.Windows.Controls.CheckBox;
-                var emailTextBox = this.FindName("EmailTextBox") as System.Windows.Controls.TextBox;
+                var sslCheckBox = this.FindName("SslCheckBox") as System.Windows.Controls.CheckBox;                var emailTextBox = this.FindName("EmailTextBox") as System.Windows.Controls.TextBox;
                 var passwordBox = this.FindName("PasswordBox") as System.Windows.Controls.PasswordBox;
                 var saveCredentialsCheckBox = this.FindName("SaveCredentialsCheckBox") as System.Windows.Controls.CheckBox;
+                var bccEmailTextBox = this.FindName("BccEmailTextBox") as System.Windows.Controls.TextBox;
+                var ccEmailTextBox = this.FindName("CcEmailTextBox") as System.Windows.Controls.TextBox;
 
-                _logger?.LogInformation("🔍 CONTROLES GUARDADO: Host={HasHost}, Email={HasEmail}, Password={HasPassword}, SaveCredentials={HasSaveCredentials}",
-                    hostTextBox != null, emailTextBox != null, passwordBox != null, saveCredentialsCheckBox != null);
+                _logger?.LogInformation("🔍 CONTROLES GUARDADO: Host={HasHost}, Email={HasEmail}, Password={HasPassword}, SaveCredentials={HasSaveCredentials}, BCC={HasBcc}, CC={HasCc}",
+                    hostTextBox != null, emailTextBox != null, passwordBox != null, saveCredentialsCheckBox != null, bccEmailTextBox != null, ccEmailTextBox != null);
 
                 // Obtener email una vez
                 var email = emailTextBox?.Text?.Trim() ?? string.Empty;
                 var password = passwordBox?.Password ?? string.Empty;
                 var shouldSaveCredentials = saveCredentialsCheckBox?.IsChecked ?? false;
+                var bccEmail = bccEmailTextBox?.Text?.Trim() ?? string.Empty;
+                var ccEmail = ccEmailTextBox?.Text?.Trim() ?? string.Empty;
                 
-                _logger?.LogInformation("🔍 VALORES OBTENIDOS: Email='{Email}', HasPassword={HasPassword}, ShouldSaveCredentials={ShouldSave}",
-                    email, !string.IsNullOrEmpty(password), shouldSaveCredentials);                // Actualizar configuración persistente
+                _logger?.LogInformation("🔍 VALORES OBTENIDOS: Email='{Email}', HasPassword={HasPassword}, ShouldSaveCredentials={ShouldSave}, BCC='{BccEmail}', CC='{CcEmail}'",
+                    email, !string.IsNullOrEmpty(password), shouldSaveCredentials, bccEmail, ccEmail);// Actualizar configuración persistente
                 var oldServer = _currentSettings.Server;
                 var oldUsername = _currentSettings.Username;
                 
                 _currentSettings.Server = hostTextBox?.Text?.Trim() ?? string.Empty;
                 _currentSettings.Port = int.TryParse(portTextBox?.Text?.Trim(), out int port) ? port : 587;
                 _currentSettings.UseSSL = sslCheckBox?.IsChecked ?? true;
-                _currentSettings.UseAuthentication = !string.IsNullOrEmpty(email);
-                _currentSettings.Username = email;     // Email principal
+                _currentSettings.UseAuthentication = !string.IsNullOrEmpty(email);                _currentSettings.Username = email;     // Email principal
                 _currentSettings.FromEmail = email;    // Mismo email (REQUERIDO para validación)
                 _currentSettings.FromName = email;     // Nombre del remitente
+                _currentSettings.BccEmail = bccEmail;  // Email para copia oculta
+                _currentSettings.CcEmail = ccEmail;    // Email para copia
                 _currentSettings.IsConfigured = true;  // Marcar como configurado
 
-                _logger?.LogInformation("🔄 CONFIGURACIÓN ACTUALIZADA: Server='{NewServer}' (antes:'{OldServer}'), Username='{NewUsername}' (antes:'{OldUsername}'), Port={Port}, UseSSL={UseSSL}",
-                    _currentSettings.Server, oldServer, _currentSettings.Username, oldUsername, _currentSettings.Port, _currentSettings.UseSSL);
+                _logger?.LogInformation("🔄 CONFIGURACIÓN ACTUALIZADA: Server='{NewServer}' (antes:'{OldServer}'), Username='{NewUsername}' (antes:'{OldUsername}'), Port={Port}, UseSSL={UseSSL}, BCC='{BccEmail}', CC='{CcEmail}'",
+                    _currentSettings.Server, oldServer, _currentSettings.Username, oldUsername, _currentSettings.Port, _currentSettings.UseSSL, _currentSettings.BccEmail, _currentSettings.CcEmail);
 
                 // ✅ CORRECCIÓN: Actualizar la configuración del servicio de configuración
                 var serviceSmtpConfig = _configurationService.Current.Smtp;
                 serviceSmtpConfig.Server = _currentSettings.Server;
                 serviceSmtpConfig.Port = _currentSettings.Port;
                 serviceSmtpConfig.UseSSL = _currentSettings.UseSSL;
-                serviceSmtpConfig.UseAuthentication = _currentSettings.UseAuthentication;
-                serviceSmtpConfig.Username = _currentSettings.Username;
+                serviceSmtpConfig.UseAuthentication = _currentSettings.UseAuthentication;                serviceSmtpConfig.Username = _currentSettings.Username;
                 serviceSmtpConfig.FromEmail = _currentSettings.FromEmail;
                 serviceSmtpConfig.FromName = _currentSettings.FromName;
+                serviceSmtpConfig.BccEmail = _currentSettings.BccEmail;
+                serviceSmtpConfig.CcEmail = _currentSettings.CcEmail;
                 serviceSmtpConfig.IsConfigured = _currentSettings.IsConfigured;
 
-                _logger?.LogInformation("🔄 ✅ Configuración del servicio actualizada: Server='{Server}', Username='{Username}', IsConfigured={IsConfigured}",
-                    serviceSmtpConfig.Server, serviceSmtpConfig.Username, serviceSmtpConfig.IsConfigured);
+                _logger?.LogInformation("🔄 ✅ Configuración del servicio actualizada: Server='{Server}', Username='{Username}', IsConfigured={IsConfigured}, BCC='{BccEmail}', CC='{CcEmail}'",
+                    serviceSmtpConfig.Server, serviceSmtpConfig.Username, serviceSmtpConfig.IsConfigured, serviceSmtpConfig.BccEmail, serviceSmtpConfig.CcEmail);
 
                 // Guardar credenciales si se solicita
                 if (shouldSaveCredentials && !string.IsNullOrEmpty(email))

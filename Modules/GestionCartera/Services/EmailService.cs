@@ -452,9 +452,7 @@ namespace GestLog.Modules.GestionCartera.Services
             {
                 return false;
             }
-        }
-
-        private MailMessage CreateMailMessage(EmailInfo emailInfo)
+        }        private MailMessage CreateMailMessage(EmailInfo emailInfo)
         {
             var config = CurrentConfiguration!;
             var message = new MailMessage
@@ -471,12 +469,40 @@ namespace GestLog.Modules.GestionCartera.Services
                 message.To.Add(recipient);
             }
 
-            // Agregar CC y BCC
+            // Agregar CC desde EmailInfo (opcional, específico por correo)
             if (!string.IsNullOrWhiteSpace(emailInfo.CcRecipient))
                 message.CC.Add(emailInfo.CcRecipient);
 
+            // Agregar BCC desde EmailInfo (opcional, específico por correo)
             if (!string.IsNullOrWhiteSpace(emailInfo.BccRecipient))
                 message.Bcc.Add(emailInfo.BccRecipient);
+
+            // ✅ NUEVO: Agregar BCC y CC automáticamente desde la configuración SMTP
+            if (!string.IsNullOrWhiteSpace(config.BccEmail))
+            {
+                // Solo agregar si no está ya incluido
+                bool alreadyInBcc = message.Bcc.Cast<MailAddress>().Any(addr => 
+                    addr.Address.Equals(config.BccEmail, StringComparison.OrdinalIgnoreCase));
+                    
+                if (!alreadyInBcc)
+                {
+                    message.Bcc.Add(config.BccEmail);
+                    _logger.LogInformation("BCC automático agregado desde configuración: {BccEmail}", config.BccEmail);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(config.CcEmail))
+            {
+                // Solo agregar si no está ya incluido
+                bool alreadyInCc = message.CC.Cast<MailAddress>().Any(addr => 
+                    addr.Address.Equals(config.CcEmail, StringComparison.OrdinalIgnoreCase));
+                    
+                if (!alreadyInCc)
+                {
+                    message.CC.Add(config.CcEmail);
+                    _logger.LogInformation("CC automático agregado desde configuración: {CcEmail}", config.CcEmail);
+                }
+            }
 
             return message;
         }

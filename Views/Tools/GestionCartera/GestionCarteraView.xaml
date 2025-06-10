@@ -5,14 +5,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:GestLog.Converters"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="800">
-      <UserControl.Resources>
+             d:DesignHeight="600" d:DesignWidth="800">      <UserControl.Resources>
         <converters:PathToFileNameConverter x:Key="PathToFileNameConverter"/>
         <converters:FileSizeConverter x:Key="FileSizeConverter"/>
         <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
         <converters:BooleanToStatusTextConverter x:Key="BooleanToStatusTextConverter"/>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
     </UserControl.Resources>
     <Grid Background="White">
         <DockPanel>
@@ -151,51 +151,195 @@
                                               Foreground="#7F8C8D" HorizontalAlignment="Right"/>
                                 </DockPanel>
                             </StackPanel>
-                        </Border>
-
-                        <!-- Action Buttons -->
+                        </Border>                        <!-- Action Buttons -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
                             <Button Content="🚀 Generar Estados de Cuenta" 
                                    Background="#27AE60" Foreground="White"
                                    Padding="20,10" BorderThickness="0" FontWeight="SemiBold"
                                    FontSize="14" Margin="5"
                                    Command="{Binding GenerateDocumentsCommand}"/>
-                            <Button Content="⏹️ Cancelar" 
-                                   Background="#E74C3C" Foreground="White"
-                                   Padding="15,10" BorderThickness="0" FontWeight="SemiBold"
-                                   FontSize="14" Margin="5"
-                                   Command="{Binding CancelGenerationCommand}"/>                            <Button Content="🗑️ Limpiar Log" 
+                                   
+                            <Button Content="🔄 Reiniciar" 
                                    Background="#95A5A6" Foreground="White"
                                    Padding="15,10" BorderThickness="0" FontWeight="SemiBold"
                                    FontSize="14" Margin="5"
-                                   Command="{Binding ClearLogCommand}"/>
+                                   Command="{Binding ResetProgressCommand}"
+                                   ToolTip="Reiniciar progreso y estado"/>
+                                   
                             <Button Content="🔍 Información" 
                                    Background="#34495E" Foreground="White"
                                    Padding="15,10" BorderThickness="0" FontWeight="SemiBold"
                                    FontSize="14" Margin="5"
                                    Command="{Binding ShowDebugInfoCommand}"/>
-                        </StackPanel>
+                        </StackPanel><!-- Modern Progress Panel -->
+                        <Border Grid.Row="3" Background="#2C3E50" CornerRadius="5" 
+                               Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                        <!-- Log Panel -->
-                        <Border Grid.Row="3" Background="#2C3E50" CornerRadius="5">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="📝 Registro de Actividad:" 
-                                          FontWeight="SemiBold" Foreground="White" 
-                                          Padding="15,10,15,5"/>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                                            HorizontalScrollBarVisibility="Auto"
-                                            Padding="15,0,15,15">
-                                    <TextBox Text="{Binding LogText, Mode=OneWay}" 
-                                            IsReadOnly="True" 
-                                            TextWrapping="Wrap" 
-                                            AcceptsReturn="True"
-                                            Background="Transparent" 
-                                            BorderThickness="0"
-                                            Foreground="#ECF0F1" 
-                                            FontFamily="Consolas" 
-                                            FontSize="12"/>
-                                </ScrollViewer>
-                            </DockPanel>
+                                <!-- Header -->
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,15,20,10">
+                                    <TextBlock Text="🔄" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Generando Estados de Cuenta..." 
+                                              FontSize="16" FontWeight="SemiBold" 
+                                              Foreground="White" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ProgressValue, StringFormat='{}{0:F0}%'}" 
+                                              FontSize="14" FontWeight="Bold" 
+                                              Foreground="#1ABC9C" 
+                                              HorizontalAlignment="Right" 
+                                              VerticalAlignment="Center" 
+                                              Margin="10,0,0,0"/>
+                                </StackPanel>                                <!-- Progress Bar -->
+                                <Border Grid.Row="1" Background="#34495E" CornerRadius="10" 
+                                       Height="25" Margin="20,0,20,10">
+                                    <Grid>
+                                        <!-- Background gradient -->
+                                        <Border Background="#2C3E50" CornerRadius="10"/>
+                                        
+                                        <!-- Main progress bar -->
+                                        <ProgressBar Value="{Binding ProgressValue}" 
+                                                    Maximum="100" 
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Height="25">
+                                            <ProgressBar.Foreground>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                    <GradientStop Color="#3498DB" Offset="0"/>
+                                                    <GradientStop Color="#2ECC71" Offset="0.5"/>
+                                                    <GradientStop Color="#1ABC9C" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </ProgressBar.Foreground>
+                                        </ProgressBar>
+                                        
+                                        <!-- Animated shimmer effect -->
+                                        <Rectangle Fill="#40FFFFFF" Opacity="0.2" 
+                                                  Width="100" Height="25" 
+                                                  HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center">
+                                            <Rectangle.RenderTransform>
+                                                <TranslateTransform x:Name="ShimmerTransform"/>
+                                            </Rectangle.RenderTransform>
+                                            <Rectangle.Triggers>
+                                                <EventTrigger RoutedEvent="Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimation 
+                                                                Storyboard.TargetName="ShimmerTransform"
+                                                                Storyboard.TargetProperty="X"
+                                                                From="-100" To="300" 
+                                                                Duration="0:0:2"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Rectangle.Triggers>
+                                        </Rectangle>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Current Document Info -->
+                                <StackPanel Grid.Row="2" Margin="20,0,20,10">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                            <TextBlock Text="📄" Foreground="#3498DB" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Documento actual:" 
+                                                      Foreground="#BDC3C7" 
+                                                      FontSize="12"/>
+                                        </StackPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <TextBlock Text="{Binding CurrentDocument}" 
+                                                      Foreground="#F39C12" 
+                                                      FontWeight="SemiBold"
+                                                      FontSize="12"/>
+                                            <TextBlock Text=" de " 
+                                                      Foreground="#BDC3C7" 
+                                                      FontSize="12"/>
+                                            <TextBlock Text="{Binding TotalDocuments}" 
+                                                      Foreground="#F39C12" 
+                                                      FontWeight="SemiBold"
+                                                      FontSize="12"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    
+                                    <!-- Document name display -->
+                                    <TextBlock Text="{Binding StatusMessage}" 
+                                              Foreground="#ECF0F1" 
+                                              FontSize="13" 
+                                              FontWeight="Medium"
+                                              Margin="26,5,0,0"
+                                              TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>                                <!-- Action Buttons -->
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" 
+                                           HorizontalAlignment="Center" 
+                                           Margin="20,10,20,15">
+                                    <Button Content="⏸️ Pausar" 
+                                           Background="#E67E22" Foreground="White"
+                                           Padding="12,6" BorderThickness="0" 
+                                           FontWeight="SemiBold" FontSize="12"
+                                           Margin="5,0"
+                                           Visibility="Collapsed"/>
+                                    
+                                    <Button Content="⏹️ Cancelar" 
+                                           Background="#E74C3C" Foreground="White"
+                                           Padding="12,6" BorderThickness="0" 
+                                           FontWeight="SemiBold" FontSize="12"
+                                           Margin="5,0"
+                                           Command="{Binding CancelGenerationCommand}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="#E74C3C"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#C0392B"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Completion Summary Panel -->
+                        <Border Grid.Row="3" Background="#27AE60" CornerRadius="5" 
+                               Visibility="{Binding IsProcessingCompleted, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Margin="20,15">
+                                <TextBlock Text="✅" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <StackPanel>
+                                    <TextBlock Text="¡Generación Completada!" 
+                                              FontSize="16" FontWeight="Bold" 
+                                              Foreground="White"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <TextBlock Text="{Binding GeneratedDocuments.Count, StringFormat='Se generaron {0} documentos'}" 
+                                                  Foreground="#E8F5E8" FontSize="12"/>
+                                        <TextBlock Text=" en " Foreground="#E8F5E8" FontSize="12"/>
+                                        <TextBlock Text="{Binding OutputFolderPath, Converter={StaticResource PathToFileNameConverter}}" 
+                                                  Foreground="#E8F5E8" FontSize="12" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                  <Button Content="📂 Abrir Carpeta" 
+                                       Background="#229954" Foreground="White"
+                                       Padding="10,5" BorderThickness="0" 
+                                       FontWeight="SemiBold" FontSize="11"
+                                       Margin="15,0,0,0"
+                                       Command="{Binding OpenOutputFolderCommand}"
+                                       VerticalAlignment="Center">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#229954"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#1E8449"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
                         </Border>
                     </Grid>
                 </TabItem>
@@ -251,14 +395,14 @@
                     </Grid>
                 </TabItem>                <!-- Tab: Envío de Correos -->
                 <TabItem Header="📧 Envío de Correos" FontSize="14" Padding="15,8">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="20">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">                        <Grid Margin="20">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>                            <!-- Estado y Configuración SMTP -->
+                            </Grid.RowDefinitions><!-- Estado y Configuración SMTP -->
                             <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -369,10 +513,8 @@
                                         </Button>
                                     </StackPanel>
                                 </Grid>
-                            </Border>
-
-                            <!-- Información del Correo -->
-                            <Border Grid.Row="1" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
+                            </Border>                            <!-- Información del Correo -->
+                            <Border Grid.Row="2" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
                                 <StackPanel>
                                     <TextBlock Text="✉️ Información del Correo" 
                                               FontSize="16" FontWeight="SemiBold" 
@@ -464,10 +606,8 @@
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
-                            </Border>
-
-                            <!-- Estado del proceso de envío -->
-                            <Border Grid.Row="2" Background="#ECF0F1" Padding="20" CornerRadius="5" Margin="0,0,0,20"
+                            </Border>                            <!-- Estado del proceso de envío -->
+                            <Border Grid.Row="3" Background="#ECF0F1" Padding="20" CornerRadius="5" Margin="0,0,0,20"
                                    Visibility="{Binding IsSendingEmail, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
                                     <DockPanel Margin="0,0,0,10">
@@ -481,10 +621,8 @@
                                                Height="20" Background="#BDC3C7" 
                                                Foreground="#3498DB" BorderThickness="0"/>
                                 </StackPanel>
-                            </Border>
-
-                            <!-- Panel de ayuda -->
-                            <Border Grid.Row="3" Background="#E8F6F3" Padding="20" CornerRadius="5" BorderBrush="#52C9A0" BorderThickness="1">
+                            </Border>                            <!-- Panel de ayuda -->
+                            <Border Grid.Row="4" Background="#E8F6F3" Padding="20" CornerRadius="5" BorderBrush="#52C9A0" BorderThickness="1">
                                 <StackPanel>
                                     <TextBlock Text="💡 Consejos para el Envío de Correos" 
                                               FontSize="16" FontWeight="SemiBold" 
@@ -508,6 +646,141 @@
                                     </TextBlock>
                                 </StackPanel>
                             </Border>
+                        </Grid>
+                    </ScrollViewer>
+                </TabItem>
+                
+                <!-- Tab: Envío Automático -->
+                <TabItem Header="🚀 Envío Automático" FontSize="14" Padding="15,8">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Título -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                <TextBlock Text="🚀 Envío Automático de Documentos" 
+                                          FontSize="16" FontWeight="Bold" 
+                                          Foreground="#2E7D32" Margin="0,0,10,0"/>
+                                <Border Background="#4CAF50" CornerRadius="12" Padding="8,3">
+                                    <TextBlock Text="NUEVO" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Selección de Excel de correos -->
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Archivo Excel de correos -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="📊 Excel con Correos de Empresas:" 
+                                              FontWeight="SemiBold" Foreground="#2E7D32" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="📁 Seleccionar Excel" 
+                                               Background="#4CAF50" Foreground="White"
+                                               Padding="12,8" BorderThickness="0" FontWeight="SemiBold"
+                                               Command="{Binding SelectEmailExcelFileCommand}"
+                                               ToolTip="Seleccionar archivo Excel que contiene correos de empresas"/>
+                                        <Button Content="ℹ️" 
+                                               Background="#2196F3" Foreground="White"
+                                               Padding="8,8" BorderThickness="0" FontWeight="Bold"
+                                               Margin="5,0,0,0"
+                                               ToolTip="El Excel debe tener columnas: NIT, Empresa, Correo"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding SelectedEmailExcelFilePath, TargetNullValue='No se ha seleccionado archivo'}" 
+                                              Margin="0,8,0,0" Foreground="#666" FontStyle="Italic" 
+                                              TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+
+                                <!-- Información de empresas -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="📈 Estado del Archivo:" 
+                                              FontWeight="SemiBold" Foreground="#2E7D32" Margin="0,0,0,8"/>
+                                    
+                                    <!-- Indicador de archivo válido -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                        <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <Ellipse.Fill>
+                                                <SolidColorBrush Color="{Binding HasEmailExcel, Converter={StaticResource BooleanToColorConverter}}"/>
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+                                        <TextBlock Text="{Binding HasEmailExcel, Converter={StaticResource BooleanToStatusTextConverter}}" 
+                                                  FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- Estadísticas del archivo -->
+                                    <StackPanel Visibility="{Binding HasEmailExcel, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Foreground="#2E7D32" FontSize="12">
+                                            <Run Text="📊 Empresas con correo: "/>
+                                            <Run Text="{Binding CompaniesWithEmail}" FontWeight="Bold"/>
+                                        </TextBlock>
+                                        <TextBlock Text="✅ Listo para envío automático" 
+                                                  Foreground="#4CAF50" FontSize="11" FontStyle="Italic" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="⚠️ Seleccione un archivo Excel válido" 
+                                              Foreground="#F44336" FontSize="11" FontStyle="Italic"
+                                              Visibility="{Binding HasEmailExcel, Converter={StaticResource InverseBooleanConverter}, ConverterParameter=Visibility}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Descripción del proceso -->
+                            <Border Grid.Row="4" Background="#F1F8E9" Padding="15" CornerRadius="5" BorderBrush="#8BC34A" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="🔄 ¿Cómo funciona el Envío Automático?" 
+                                              FontWeight="SemiBold" Foreground="#33691E" Margin="0,0,0,8"/>
+                                    <TextBlock TextWrapping="Wrap" Foreground="#33691E" LineHeight="18" FontSize="12">
+                                        <Run Text="1. "/>
+                                        <Run Text="Selecciona un Excel con columnas: NIT, Empresa, Correo"/>
+                                        <LineBreak/>
+                                        <Run Text="2. "/>
+                                        <Run Text="El sistema lee automáticamente los documentos generados"/>
+                                        <LineBreak/>
+                                        <Run Text="3. "/>
+                                        <Run Text="Busca el correo correspondiente a cada empresa por NIT"/>
+                                        <LineBreak/>
+                                        <Run Text="4. "/>
+                                        <Run Text="Envía cada documento al correo correcto automáticamente"/>
+                                        <LineBreak/>
+                                        <Run Text="5. "/>
+                                        <Run Text="Los correos BCC/CC configurados se aplican automáticamente"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>                            <!-- Botón de envío automático -->
+                            <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="🚀 Enviar Documentos Automáticamente"
+                                       Background="#4CAF50" Foreground="White"
+                                       Padding="25,12" BorderThickness="0" FontWeight="Bold"
+                                       FontSize="14"
+                                       Command="{Binding SendDocumentsAutomaticallyCommand}"
+                                       IsEnabled="{Binding CanSendAutomatically}"
+                                       ToolTip="Envía automáticamente cada documento al correo correspondiente según el Excel">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#4CAF50"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#45A049"/>
+                                                </Trigger>
+                                                <Trigger Property="IsEnabled" Value="False">
+                                                    <Setter Property="Background" Value="#CCCCCC"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
                         </Grid>
                     </ScrollViewer>
                 </TabItem>

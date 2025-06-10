@@ -22,7 +22,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
     public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _mainViewModel = new MainDocumentGenerationViewModel(pdfGenerator, null!, logger);
+        _mainViewModel = new MainDocumentGenerationViewModel(pdfGenerator, null, logger);
         
         InitializeAsync();
     }
@@ -123,20 +123,18 @@ public partial class DocumentGenerationViewModel : ObservableObject
 
     public bool SmtpUseSsl 
     { 
-        get => _mainViewModel.SmtpConfiguration.EnableSsl; 
-        set => _mainViewModel.SmtpConfiguration.EnableSsl = value; 
+        get => _mainViewModel.SmtpConfiguration.SmtpUseSsl; 
+        set => _mainViewModel.SmtpConfiguration.SmtpUseSsl = value; 
     }
 
     public bool EnableSsl 
     { 
         get => _mainViewModel.SmtpConfiguration.EnableSsl; 
         set => _mainViewModel.SmtpConfiguration.EnableSsl = value; 
-    }    public bool IsSmtpConfigured => _mainViewModel.SmtpConfiguration.IsEmailConfigured;
-    public bool IsEmailConfigured 
-    { 
-        get => _mainViewModel.SmtpConfiguration.IsEmailConfigured; 
-        set => _mainViewModel.SmtpConfiguration.IsEmailConfigured = value; 
     }
+
+    public bool IsSmtpConfigured => _mainViewModel.SmtpConfiguration.IsSmtpConfigured;
+    public bool IsEmailConfigured => _mainViewModel.SmtpConfiguration.IsEmailConfigured;
 
     // Propiedades de email automático
     public string SelectedEmailExcelFilePath 
@@ -207,6 +205,9 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private async Task GenerateDocuments() => await _mainViewModel.PdfGeneration.GenerateDocumentsCommand.ExecuteAsync(null);
 
     [RelayCommand]
+    private void CancelGeneration() => _mainViewModel.PdfGeneration.CancelGenerationCommand.Execute(null);
+
+    [RelayCommand]
     private void ClearLog() => _mainViewModel.ClearLogCommand.Execute(null);
 
     [RelayCommand(CanExecute = nameof(CanOpenOutputFolder))]
@@ -217,18 +218,17 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private async Task ConfigureSmtp() => await _mainViewModel.SmtpConfiguration.ConfigureSmtpCommand.ExecuteAsync(null);
 
     [RelayCommand]
-    private async Task TestSmtpConnection() => await _mainViewModel.SmtpConfiguration.TestSmtpConnectionCommand.ExecuteAsync(null);    // Comandos de email automático
+    private async Task TestSmtpConnection() => await _mainViewModel.SmtpConfiguration.TestSmtpConnectionCommand.ExecuteAsync(null);
+
     [RelayCommand]
-    private async Task SelectEmailExcelFile() 
-    {
-        await _mainViewModel.AutomaticEmail.SelectEmailExcelFileAsync();
-    }
+    private void ClearEmailConfiguration() => _mainViewModel.SmtpConfiguration.ClearEmailConfigurationCommand.Execute(null);
+
+    // Comandos de email automático
+    [RelayCommand]
+    private void SelectEmailExcelFile() => _mainViewModel.AutomaticEmail.SelectEmailExcelFileCommand.Execute(null);
 
     [RelayCommand(CanExecute = nameof(CanSendAutomatically))]
-    private async Task SendDocumentsAutomatically() 
-    {
-        await _mainViewModel.AutomaticEmail.SendDocumentsAutomaticallyWithConfig(_mainViewModel.SmtpConfiguration);
-    }
+    private async Task SendDocumentsAutomatically() => await _mainViewModel.AutomaticEmail.SendDocumentsAutomaticallyCommand.ExecuteAsync(null);
 
     #endregion
 

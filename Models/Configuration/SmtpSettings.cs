@@ -14,9 +14,10 @@ public class SmtpSettings : INotifyPropertyChanged
     private string _username = string.Empty;
     private string _password = string.Empty;
     private string _fromEmail = string.Empty;
-    private string _fromName = string.Empty;
-    private int _timeout = 30000;
+    private string _fromName = string.Empty;    private int _timeout = 30000;
     private bool _isConfigured = false;
+    private string _bccEmail = string.Empty;
+    private string _ccEmail = string.Empty;
 
     /// <summary>
     /// Servidor SMTP (ejemplo: smtp.gmail.com)
@@ -95,16 +96,32 @@ public class SmtpSettings : INotifyPropertyChanged
     {
         get => _timeout;
         set => SetProperty(ref _timeout, value);
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Indica si la configuración SMTP está completa y válida
     /// </summary>
     public bool IsConfigured
     {
         get => _isConfigured;
         set => SetProperty(ref _isConfigured, value);
-    }    /// <summary>
+    }
+
+    /// <summary>
+    /// Email para copia oculta (BCC) en todos los envíos
+    /// </summary>
+    public string BccEmail
+    {
+        get => _bccEmail;
+        set => SetProperty(ref _bccEmail, value);
+    }
+
+    /// <summary>
+    /// Email para copia (CC) opcional
+    /// </summary>
+    public string CcEmail
+    {
+        get => _ccEmail;
+        set => SetProperty(ref _ccEmail, value);
+    }/// <summary>
     /// Valida si la configuración SMTP tiene todos los datos necesarios
     /// </summary>
     public void ValidateConfiguration()
@@ -113,9 +130,7 @@ public class SmtpSettings : INotifyPropertyChanged
                       Port > 0 &&
                       !string.IsNullOrWhiteSpace(FromEmail) &&
                       (!UseAuthentication || (!string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password)));
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Crea una copia de la configuración SMTP actual
     /// </summary>
     public SmtpSettings Clone()
@@ -130,7 +145,9 @@ public class SmtpSettings : INotifyPropertyChanged
             FromEmail = this.FromEmail,
             FromName = this.FromName,
             Timeout = this.Timeout,
-            IsConfigured = this.IsConfigured
+            IsConfigured = this.IsConfigured,
+            BccEmail = this.BccEmail,
+            CcEmail = this.CcEmail
         };
     }
 

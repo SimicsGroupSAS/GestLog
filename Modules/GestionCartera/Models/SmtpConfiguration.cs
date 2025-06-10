@@ -41,13 +41,23 @@ namespace GestLog.Modules.GestionCartera.Models
         /// <summary>
         /// Indica si SSL está habilitado
         /// </summary>
-        public bool EnableSsl { get; set; } = true;
-
-        /// <summary>
+        public bool EnableSsl { get; set; } = true;        /// <summary>
         /// Timeout en milisegundos para el envío
         /// </summary>
         [Range(1000, 300000, ErrorMessage = "El timeout debe estar entre 1000 y 300000 ms")]
         public int Timeout { get; set; } = 120000;
+
+        /// <summary>
+        /// Dirección de correo para copia oculta (BCC) en todos los envíos
+        /// </summary>
+        [EmailAddress(ErrorMessage = "Ingrese una dirección de correo válida para BCC")]
+        public string? BccEmail { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Dirección de correo para copia (CC) opcional
+        /// </summary>
+        [EmailAddress(ErrorMessage = "Ingrese una dirección de correo válida para CC")]
+        public string? CcEmail { get; set; } = string.Empty;
 
         /// <summary>
         /// Indica si las credenciales están guardadas de forma segura
@@ -109,9 +119,7 @@ namespace GestLog.Modules.GestionCartera.Models
                 Outlook,
                 Office365
             };
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Crea una copia de la configuración
         /// </summary>
         public SmtpConfiguration Clone()
@@ -125,6 +133,8 @@ namespace GestLog.Modules.GestionCartera.Models
                 Password = Password,
                 EnableSsl = EnableSsl,
                 Timeout = Timeout,
+                BccEmail = BccEmail,
+                CcEmail = CcEmail,
                 HasSavedCredentials = HasSavedCredentials,
                 LastConfigured = LastConfigured,
                 IsValid = IsValid,

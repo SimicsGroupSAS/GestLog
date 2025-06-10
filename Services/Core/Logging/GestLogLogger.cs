@@ -179,6 +179,14 @@ public static class GestLogLoggerExtensions
     }
 
     /// <summary>
+    /// Log de advertencias con excepción
+    /// </summary>
+    public static void LogWarning(this IGestLogLogger logger, Exception exception, string message, params object[] args)
+    {
+        logger.Logger.LogWarning(exception, message, args);
+    }
+
+    /// <summary>
     /// Log de información
     /// </summary>
     public static void LogInformation(this IGestLogLogger logger, string message, params object[] args)
