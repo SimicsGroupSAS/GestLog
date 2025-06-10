@@ -465,11 +465,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
     public void Cleanup()
     {
         // Limpiar recursos si es necesario
-    }
-
-    // Este comando será llamado desde el MainViewModel con el parámetro correcto
-    public async Task SendDocumentsAutomaticallyWithConfig(SmtpConfigurationViewModel smtpConfig)
+    }    // Este comando será llamado desde el MainViewModel con el parámetro correcto
+    public async Task<bool> SendDocumentsAutomaticallyWithConfig(SmtpConfigurationViewModel smtpConfig)
     {
-        await SendDocumentsAutomaticallyAsync(GeneratedDocuments, smtpConfig);
+        return await SendDocumentsAutomaticallyAsync(GeneratedDocuments, smtpConfig);
     }
 }

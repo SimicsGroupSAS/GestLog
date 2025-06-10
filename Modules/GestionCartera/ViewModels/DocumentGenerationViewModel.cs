@@ -31,9 +31,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
         _mainViewModel = new MainDocumentGenerationViewModel(pdfGenerator, emailService, logger);
         
         InitializeAsync();
-    }
-
-    private async void InitializeAsync()
+    }    private async void InitializeAsync()
     {
         try
         {
@@ -42,8 +40,26 @@ public partial class DocumentGenerationViewModel : ObservableObject
             // Suscribirse a eventos de cambio de propiedad de los sub-ViewModels
             _mainViewModel.PdfGeneration.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
             _mainViewModel.DocumentManagement.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
-            _mainViewModel.AutomaticEmail.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
-            _mainViewModel.SmtpConfiguration.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+            _mainViewModel.AutomaticEmail.PropertyChanged += (s, e) => 
+            {
+                OnPropertyChanged(e.PropertyName);
+                // Notificar cambios en CanSendAutomatically cuando cambien propiedades relevantes
+                if (e.PropertyName == nameof(_mainViewModel.AutomaticEmail.CanSendAutomatically) ||
+                    e.PropertyName == nameof(_mainViewModel.AutomaticEmail.IsSendingEmail) ||
+                    e.PropertyName == nameof(_mainViewModel.AutomaticEmail.HasEmailExcel))
+                {
+                    SendDocumentsAutomaticallyCommand.NotifyCanExecuteChanged();
+                }
+            };
+            _mainViewModel.SmtpConfiguration.PropertyChanged += (s, e) => 
+            {
+                OnPropertyChanged(e.PropertyName);
+                // Notificar cambios en CanSendAutomatically cuando cambie la configuración SMTP
+                if (e.PropertyName == nameof(_mainViewModel.SmtpConfiguration.IsEmailConfigured))
+                {
+                    SendDocumentsAutomaticallyCommand.NotifyCanExecuteChanged();
+                }
+            };
             _mainViewModel.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
         }
         catch (Exception ex)
@@ -227,12 +243,10 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private async Task SelectEmailExcelFile() 
     {
         await _mainViewModel.AutomaticEmail.SelectEmailExcelFileAsync();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanSendAutomatically))]
+    }    [RelayCommand(CanExecute = nameof(CanSendAutomatically))]
     private async Task SendDocumentsAutomatically() 
     {
-        await _mainViewModel.AutomaticEmail.SendDocumentsAutomaticallyWithConfig(_mainViewModel.SmtpConfiguration);
+        await _mainViewModel.SendDocumentsAutomaticallyCommand.ExecuteAsync(null);
     }
 
     #endregion

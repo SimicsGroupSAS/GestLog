@@ -105,8 +105,12 @@ public partial class MainDocumentGenerationViewModel : ObservableObject
             {
                 // Sincronizar configuración con el ViewModel de email automático
                 AutomaticEmail.UpdateEmailConfiguration(SmtpConfiguration.IsEmailConfigured);
+                // Notificar cambio en CanSendDocumentsAutomatically
+                SendDocumentsAutomaticallyCommand.NotifyCanExecuteChanged();
             }
-        };        // Eventos de email automático
+        };
+
+        // Eventos de email automático
         AutomaticEmail.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(AutomaticEmail.StatusMessage))
@@ -116,6 +120,13 @@ public partial class MainDocumentGenerationViewModel : ObservableObject
             else if (e.PropertyName == nameof(AutomaticEmail.LogText))
             {
                 LogText += AutomaticEmail.LogText;
+            }
+            else if (e.PropertyName == nameof(AutomaticEmail.CanSendAutomatically) ||
+                     e.PropertyName == nameof(AutomaticEmail.IsSendingEmail) ||
+                     e.PropertyName == nameof(AutomaticEmail.HasEmailExcel))
+            {
+                // Notificar cambio en CanSendDocumentsAutomatically
+                SendDocumentsAutomaticallyCommand.NotifyCanExecuteChanged();
             }
         };
     }    /// <summary>
@@ -147,6 +158,51 @@ public partial class MainDocumentGenerationViewModel : ObservableObject
         LogText = string.Empty;
         GlobalStatusMessage = "Log limpiado";
         _logger.LogInformation("🧹 Log de texto limpiado");
+    }    /// <summary>
+    /// Comando para envío automático de documentos por email
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanSendDocumentsAutomatically))]
+    private async Task SendDocumentsAutomatically()
+    {
+        try
+        {
+            if (!AutomaticEmail.CanSendAutomatically)
+            {
+                GlobalStatusMessage = "No se puede enviar: verifica configuración SMTP, archivo Excel y documentos generados";
+                _logger.LogWarning("❌ No se puede enviar automáticamente - requisitos no cumplidos");
+                return;
+            }
+
+            _logger.LogInformation("🚀 Iniciando envío automático de documentos por email");
+            GlobalStatusMessage = "Enviando documentos automáticamente...";
+
+            // Ejecutar envío automático pasando la configuración SMTP
+            var result = await AutomaticEmail.SendDocumentsAutomaticallyWithConfig(SmtpConfiguration);
+
+            if (result)
+            {
+                GlobalStatusMessage = "✅ Envío automático completado exitosamente";
+                _logger.LogInformation("✅ Envío automático completado con éxito");
+            }
+            else
+            {
+                GlobalStatusMessage = "❌ Envío automático falló - revisar logs para detalles";
+                _logger.LogWarning("❌ Envío automático no completado exitosamente");
+            }
+        }
+        catch (Exception ex)
+        {
+            GlobalStatusMessage = $"❌ Error en envío automático: {ex.Message}";
+            _logger.LogError(ex, "❌ Error durante el envío automático de documentos");
+        }
+    }
+
+    /// <summary>
+    /// Determina si se puede ejecutar el envío automático
+    /// </summary>
+    private bool CanSendDocumentsAutomatically()
+    {
+        return AutomaticEmail?.CanSendAutomatically == true;
     }
 
     /// <summary>
