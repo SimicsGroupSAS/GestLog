@@ -56,11 +56,11 @@ public static class LoggingService
             {
                 builder.ClearProviders();
                 builder.AddSerilog(Log.Logger);
-            });
-              // Servicios custom
+            });            // Servicios custom
             services.AddSingleton<IGestLogLogger, GestLogLogger>();
             services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
             services.AddSingleton<Configuration.IConfigurationService, Configuration.ConfigurationService>();
+            services.AddSingleton<Security.ICredentialService, Security.WindowsCredentialService>();
               // Servicios del dominio
             services.AddTransient<Modules.DaaterProccesor.Services.IResourceLoaderService, 
                 Modules.DaaterProccesor.Services.ResourceLoaderService>();
@@ -74,6 +74,8 @@ public static class LoggingService
                 Modules.DaaterProccesor.Services.ConsolidatedFilterService>();            // Servicios de Gestión de Cartera
             services.AddTransient<Modules.GestionCartera.Services.IPdfGeneratorService, 
                 Modules.GestionCartera.Services.PdfGeneratorService>();
+            services.AddTransient<Modules.GestionCartera.Services.IEmailService, 
+                Modules.GestionCartera.Services.EmailService>();
             
             // ViewModels
             services.AddTransient<Modules.GestionCartera.ViewModels.DocumentGenerationViewModel>();

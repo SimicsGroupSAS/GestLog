@@ -14,7 +14,7 @@ public partial class App : System.Windows.Application
 {
     private IGestLogLogger? _logger;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -23,11 +23,13 @@ public partial class App : System.Windows.Application
             // Inicializar el sistema de logging y servicios
             LoggingService.InitializeServices();
             _logger = LoggingService.GetLogger();
-            
-            _logger.Logger.LogInformation("🚀 Aplicación GestLog iniciada");
+              _logger.Logger.LogInformation("🚀 Aplicación GestLog iniciada");
             _logger.LogConfiguration("Version", "1.0.0");
             _logger.LogConfiguration("Environment", Environment.OSVersion.ToString());
             _logger.LogConfiguration("WorkingDirectory", Environment.CurrentDirectory);
+
+            // CORRECCIÓN: Cargar configuración automáticamente al inicio
+            await LoadApplicationConfigurationAsync();
 
             // Configurar manejo global de excepciones
             SetupGlobalExceptionHandling();
@@ -48,7 +50,30 @@ public partial class App : System.Windows.Application
             {                // Si ni siquiera el logging de emergencia funciona, salir
                 System.Windows.Application.Current.Shutdown(1);
                 return;
-            }
+            }        }
+    }
+
+    /// <summary>
+    /// Carga la configuración de la aplicación al inicio
+    /// </summary>
+    private async Task LoadApplicationConfigurationAsync()
+    {
+        try
+        {
+            _logger?.Logger.LogInformation("🔧 Cargando configuración de la aplicación...");
+            
+            // Obtener el servicio de configuración
+            var configurationService = LoggingService.GetService<GestLog.Services.Configuration.IConfigurationService>();
+            
+            // Cargar la configuración desde el archivo
+            await configurationService.LoadAsync();
+            
+            _logger?.Logger.LogInformation("✅ Configuración de la aplicación cargada exitosamente");
+        }
+        catch (Exception ex)
+        {
+            _logger?.Logger.LogError(ex, "❌ Error al cargar la configuración de la aplicación");
+            // No es crítico, la aplicación puede continuar con configuración por defecto
         }
     }
 

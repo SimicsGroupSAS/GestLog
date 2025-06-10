@@ -43,10 +43,10 @@ public partial class ConfigurationViewModel : ObservableObject
     /// </summary>
     public ObservableCollection<ConfigurationSection> AvailableSections { get; } = new()
     {
-        new("General", "🔧", "Configuraciones generales de la aplicación"),
-        new("UI", "🎨", "Configuraciones de interfaz de usuario"),
+        new("General", "🔧", "Configuraciones generales de la aplicación"),        new("UI", "🎨", "Configuraciones de interfaz de usuario"),
         new("Logging", "📝", "Configuraciones del sistema de logging"),
         new("Performance", "⚡", "Configuraciones de rendimiento"),
+        new("SMTP", "📧", "Configuraciones del servidor de correo"),
         new("DaaterProcessor", "📊", "Configuraciones del procesador de datos"),
         new("ErrorLog", "⚠️", "Configuraciones del registro de errores")
     };

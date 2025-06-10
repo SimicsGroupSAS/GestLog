@@ -6,11 +6,13 @@
              xmlns:converters="clr-namespace:GestLog.Converters"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800">
-    
-    <UserControl.Resources>
+      <UserControl.Resources>
         <converters:PathToFileNameConverter x:Key="PathToFileNameConverter"/>
         <converters:FileSizeConverter x:Key="FileSizeConverter"/>
         <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+        <converters:BooleanToStatusTextConverter x:Key="BooleanToStatusTextConverter"/>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
     </UserControl.Resources>
     <Grid Background="White">
         <DockPanel>
@@ -247,23 +249,267 @@
                             </DockPanel>
                         </Border>
                     </Grid>
-                </TabItem>
+                </TabItem>                <!-- Tab: Envío de Correos -->
+                <TabItem Header="📧 Envío de Correos" FontSize="14" Padding="15,8">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>                            <!-- Estado y Configuración SMTP -->
+                            <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                <!-- Tab: Próximamente (Envío) -->
-                <TabItem Header="📧 Envío de Correos" FontSize="14" Padding="15,8" IsEnabled="False">
-                    <Grid Margin="20">
-                        <Border Background="#F8F9FA" Padding="40" CornerRadius="10" 
-                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="🚧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                                <TextBlock Text="Próximamente" FontSize="20" FontWeight="SemiBold" 
-                                          HorizontalAlignment="Center" Foreground="#95A5A6" Margin="0,0,0,10"/>
-                                <TextBlock Text="La funcionalidad de envío de correos se implementará en la siguiente fase"
-                                          FontSize="14" Foreground="#95A5A6" TextWrapping="Wrap" 
-                                          HorizontalAlignment="Center" TextAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
+                                    <!-- Información de Estado -->
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="⚙️ Configuración del Servidor SMTP" 
+                                                  FontSize="16" FontWeight="SemiBold" 
+                                                  Foreground="#2C3E50" Margin="0,0,0,10"/>
+                                        
+                                        <!-- Estado actual -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                            <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <Ellipse.Fill>
+                                                    <SolidColorBrush Color="{Binding IsEmailConfigured, Converter={StaticResource BooleanToColorConverter}}"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <TextBlock Text="{Binding IsEmailConfigured, Converter={StaticResource BooleanToStatusTextConverter}}" 
+                                                      FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>                                        <!-- Información básica -->
+                                        <Grid Margin="0,0,0,10" 
+                                             Visibility="{Binding IsEmailConfigured, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            
+                                            <!-- Usuario/Email -->
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="📧 Usuario:" 
+                                                      FontWeight="SemiBold" FontSize="11" Margin="0,0,10,2"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SmtpUsername}" 
+                                                      FontSize="11" Foreground="#2C3E50"/>
+                                            
+                                            <!-- Servidor -->
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="🌐 Servidor:" 
+                                                      FontWeight="SemiBold" FontSize="11" Margin="0,0,10,2"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" FontSize="11" Foreground="#2C3E50">
+                                                <Run Text="{Binding SmtpServer}"/>
+                                                <Run Text=":" Foreground="#7F8C8D"/>
+                                                <Run Text="{Binding SmtpPort}" FontWeight="SemiBold"/>
+                                                <Run Text=" (SSL: " Foreground="#7F8C8D"/>
+                                                <Run Text="{Binding EnableSsl}" FontWeight="SemiBold"/>
+                                                <Run Text=")" Foreground="#7F8C8D"/>
+                                            </TextBlock>
+                                            
+                                            <!-- Estado de credenciales -->
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="🔐 Credenciales:" 
+                                                      FontWeight="SemiBold" FontSize="11" Margin="0,0,10,2"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="Guardadas de forma segura" 
+                                                      FontSize="11" Foreground="#27AE60" FontStyle="Italic"/>
+                                        </Grid>
+
+                                        <TextBlock Text="Configure el servidor SMTP para habilitar el envío de correos electrónicos"
+                                                  FontSize="11" Foreground="#7F8C8D"
+                                                  Visibility="{Binding IsEmailConfigured, Converter={StaticResource InverseBooleanConverter}, ConverterParameter=Visibility}"/>
+                                    </StackPanel>                                    <!-- Botones de Configuración -->
+                                    <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right">
+                                        <!-- Botón Principal de Configuración -->                                        <Button Content="⚙️ Configurar SMTP" 
+                                               Background="#E67E22" Foreground="White"
+                                               Padding="25,15" BorderThickness="0" FontWeight="Bold"
+                                               FontSize="16"
+                                               Click="ConfigureSmtp_Click"
+                                               VerticalAlignment="Center"
+                                               ToolTip="Abrir ventana de configuración avanzada del servidor SMTP"
+                                               Cursor="Hand"
+                                               Margin="0,0,0,10">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#E67E22"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#D35400"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        
+                                        <!-- Botón de Test Rápido -->                                        <Button Content="🧪 Probar Conexión" 
+                                               Background="#3498DB" Foreground="White"
+                                               Padding="15,8" BorderThickness="0" FontWeight="SemiBold"
+                                               FontSize="12"
+                                               Command="{Binding SendTestEmailCommand}"
+                                               IsEnabled="{Binding IsEmailConfigured}"
+                                               ToolTip="Enviar un correo de prueba rápido"
+                                               Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#3498DB"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#2980B9"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Background" Value="#BDC3C7"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Información del Correo -->
+                            <Border Grid.Row="1" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock Text="✉️ Información del Correo" 
+                                              FontSize="16" FontWeight="SemiBold" 
+                                              Foreground="#2C3E50" Margin="0,0,0,15"/>
+                                    
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="10"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="10"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="10"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="10"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Destinatarios -->
+                                        <StackPanel Grid.Row="0" Grid.Column="0">
+                                            <TextBlock Text="Destinatarios (Para):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding EmailRecipients, UpdateSourceTrigger=PropertyChanged}" 
+                                                    Padding="8" BorderBrush="#BDC3C7"
+                                                    ToolTip="Separar múltiples direcciones con punto y coma (;)"/>
+                                        </StackPanel>
+
+                                        <!-- Asunto -->
+                                        <StackPanel Grid.Row="0" Grid.Column="2">
+                                            <TextBlock Text="Asunto:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding EmailSubject, UpdateSourceTrigger=PropertyChanged}" 
+                                                    Padding="8" BorderBrush="#BDC3C7"/>
+                                        </StackPanel>
+
+                                        <!-- CC -->
+                                        <StackPanel Grid.Row="2" Grid.Column="0">
+                                            <TextBlock Text="Copia (CC):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding EmailCc, UpdateSourceTrigger=PropertyChanged}" 
+                                                    Padding="8" BorderBrush="#BDC3C7"
+                                                    ToolTip="Separar múltiples direcciones con punto y coma (;)"/>
+                                        </StackPanel>
+
+                                        <!-- BCC -->
+                                        <StackPanel Grid.Row="2" Grid.Column="2">
+                                            <TextBlock Text="Copia Oculta (BCC):" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding EmailBcc, UpdateSourceTrigger=PropertyChanged}" 
+                                                    Padding="8" BorderBrush="#BDC3C7"
+                                                    ToolTip="Separar múltiples direcciones con punto y coma (;)"/>
+                                        </StackPanel>
+
+                                        <!-- Cuerpo del mensaje -->
+                                        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3">
+                                            <TextBlock Text="Mensaje:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding EmailBody, UpdateSourceTrigger=PropertyChanged}" 
+                                                    TextWrapping="Wrap" AcceptsReturn="True"
+                                                    Height="100" Padding="8" BorderBrush="#BDC3C7"
+                                                    VerticalScrollBarVisibility="Auto"/>
+                                        </StackPanel>
+
+                                        <!-- Opciones -->
+                                        <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal">
+                                            <CheckBox IsChecked="{Binding UseHtmlEmail}" 
+                                                     Content="Usar formato HTML" 
+                                                     FontWeight="SemiBold" Margin="0,0,20,0"
+                                                     ToolTip="Activar para enviar correos con formato profesional"/>
+                                        </StackPanel>
+
+                                        <!-- Botones de envío -->
+                                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3" 
+                                                   Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Content="🔍 Enviar Prueba" 
+                                                   Background="#F39C12" Foreground="White"
+                                                   Padding="15,8" BorderThickness="0" FontWeight="SemiBold"
+                                                   Margin="0,0,10,0"
+                                                   Command="{Binding SendTestEmailCommand}"
+                                                   IsEnabled="{Binding IsSendingEmail, Converter={StaticResource InverseBooleanConverter}}"
+                                                   ToolTip="Enviar un correo de prueba para verificar la configuración"/>
+                                            
+                                            <Button Content="📧 Enviar Documentos" 
+                                                   Background="#27AE60" Foreground="White"
+                                                   Padding="15,8" BorderThickness="0" FontWeight="SemiBold"
+                                                   Command="{Binding SendDocumentsByEmailCommand}"
+                                                   IsEnabled="{Binding IsSendingEmail, Converter={StaticResource InverseBooleanConverter}}"
+                                                   ToolTip="Enviar todos los documentos generados por correo electrónico"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Estado del proceso de envío -->
+                            <Border Grid.Row="2" Background="#ECF0F1" Padding="20" CornerRadius="5" Margin="0,0,0,20"
+                                   Visibility="{Binding IsSendingEmail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="📤 Enviando correos..." FontWeight="SemiBold" 
+                                                  Foreground="#2C3E50" DockPanel.Dock="Left"/>
+                                        <TextBlock Text="{Binding StatusMessage}" 
+                                                  Foreground="#34495E" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    
+                                    <ProgressBar IsIndeterminate="True" 
+                                               Height="20" Background="#BDC3C7" 
+                                               Foreground="#3498DB" BorderThickness="0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Panel de ayuda -->
+                            <Border Grid.Row="3" Background="#E8F6F3" Padding="20" CornerRadius="5" BorderBrush="#52C9A0" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="💡 Consejos para el Envío de Correos" 
+                                              FontSize="16" FontWeight="SemiBold" 
+                                              Foreground="#1E8449" Margin="0,0,0,15"/>
+                                    
+                                    <TextBlock TextWrapping="Wrap" Foreground="#1E8449" LineHeight="20">
+                                        <Run Text="• "/>
+                                        <Run Text="Para Gmail: Usa una contraseña de aplicación en lugar de tu contraseña personal"/>
+                                        <LineBreak/>
+                                        <Run Text="• "/>
+                                        <Run Text="Para Outlook: Servidor smtp-mail.outlook.com, puerto 587"/>
+                                        <LineBreak/>
+                                        <Run Text="• "/>
+                                        <Run Text="Separa múltiples destinatarios con punto y coma (;)"/>
+                                        <LineBreak/>
+                                        <Run Text="• "/>
+                                        <Run Text="Siempre prueba la configuración antes de enviar documentos"/>
+                                        <LineBreak/>
+                                        <Run Text="• "/>
+                                        <Run Text="Los documentos se adjuntarán automáticamente al correo"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
                 </TabItem>
             </TabControl>
         </DockPanel>

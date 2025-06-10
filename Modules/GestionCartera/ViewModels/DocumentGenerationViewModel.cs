@@ -8,8 +8,12 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestLog.Services.Core.Logging;
+using GestLog.Services.Core.Security;
+using GestLog.Services.Configuration;
 using GestLog.Modules.GestionCartera.Services;
+using GestLog.Modules.GestionCartera.Models;
 using Microsoft.Win32;
+using Microsoft.Extensions.DependencyInjection;
 using Ookii.Dialogs.Wpf;
 
 namespace GestLog.Modules.GestionCartera.ViewModels;
@@ -18,8 +22,10 @@ namespace GestLog.Modules.GestionCartera.ViewModels;
 /// ViewModel para la vista de generación de documentos PDF
 /// </summary>
 public partial class DocumentGenerationViewModel : ObservableObject
-{
-    private readonly IPdfGeneratorService _pdfGenerator;
+{    private readonly IPdfGeneratorService _pdfGenerator;
+    private readonly IEmailService? _emailService;
+    private readonly IConfigurationService _configurationService;
+    private readonly ICredentialService _credentialService;
     private readonly IGestLogLogger _logger;
     private CancellationTokenSource? _cancellationTokenSource;
     private const string DEFAULT_TEMPLATE_FILE = "PlantillaSIMICS.png";
@@ -41,6 +47,21 @@ public partial class DocumentGenerationViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(TemplateStatusMessage))]
     private bool _useDefaultTemplate = true;
 
+    // Propiedades para funcionalidad de email
+    [ObservableProperty] private string _smtpServer = string.Empty;
+    [ObservableProperty] private int _smtpPort = 587;
+    [ObservableProperty] private string _smtpUsername = string.Empty;
+    [ObservableProperty] private string _smtpPassword = string.Empty;
+    [ObservableProperty] private bool _enableSsl = true;
+    [ObservableProperty] private bool _isEmailConfigured = false;
+    [ObservableProperty] private string _emailSubject = "Estado de Cartera - Documentos";
+    [ObservableProperty] private string _emailBody = "Estimado cliente,\n\nAdjunto encontrará los documentos de estado de cartera solicitados.\n\nSaludos cordiales,\nSIMICS GROUP S.A.S.";
+    [ObservableProperty] private string _emailRecipients = string.Empty;
+    [ObservableProperty] private string _emailCc = string.Empty;
+    [ObservableProperty] private string _emailBcc = string.Empty;
+    [ObservableProperty] private bool _useHtmlEmail = true;
+    [ObservableProperty] private bool _isSendingEmail = false;
+
     public string TemplateStatusMessage => GetTemplateStatusMessage();
 
     private string GetTemplateStatusMessage()
@@ -55,16 +76,63 @@ public partial class DocumentGenerationViewModel : ObservableObject
             return $"Usando plantilla predeterminada: {DEFAULT_TEMPLATE_FILE}";
             
         return $"Usando plantilla personalizada: {Path.GetFileName(TemplateFilePath)}";
-    }
-
-    public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
+    }    public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
     {
         _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         
+        // Obtener servicios del contenedor DI
+        var serviceProvider = LoggingService.GetServiceProvider();
+        _configurationService = serviceProvider.GetRequiredService<IConfigurationService>();
+        _credentialService = serviceProvider.GetRequiredService<ICredentialService>();
+        
+        // Suscribirse a cambios de configuración para sincronización automática
+        _configurationService.ConfigurationChanged += OnConfigurationChanged;
+        
         // Configurar carpeta de salida por defecto
         InitializeDefaultPaths();
-    }    private void InitializeDefaultPaths()
+        LoadSmtpConfiguration();
+    }
+
+    public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IEmailService emailService, IGestLogLogger logger)
+    {
+        _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Obtener servicios del contenedor DI
+        var serviceProvider = LoggingService.GetServiceProvider();
+        _configurationService = serviceProvider.GetRequiredService<IConfigurationService>();
+        _credentialService = serviceProvider.GetRequiredService<ICredentialService>();
+        
+        // Suscribirse a cambios de configuración para sincronización automática
+        _configurationService.ConfigurationChanged += OnConfigurationChanged;
+        
+        // Configurar carpeta de salida por defecto
+        InitializeDefaultPaths();
+        LoadSmtpConfiguration();
+    }
+
+    public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IEmailService emailService, IConfigurationService configurationService, IGestLogLogger logger)
+    {
+        _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Obtener CredentialService del contenedor DI
+        var serviceProvider = LoggingService.GetServiceProvider();
+        _credentialService = serviceProvider.GetRequiredService<ICredentialService>();
+        
+        // Suscribirse a cambios de configuración para sincronización automática
+        _configurationService.ConfigurationChanged += OnConfigurationChanged;
+        
+        // Configurar carpeta de salida por defecto
+        InitializeDefaultPaths();
+        LoadSmtpConfiguration();
+    }
+
+    private void InitializeDefaultPaths()
     {
         try
         {
@@ -76,7 +144,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
             if (!Directory.Exists(outputFolder))
             {
                 Directory.CreateDirectory(outputFolder);
-                AddLog("📁 Carpeta de salida creada automáticamente");
+                _logger.LogInformation("📁 Carpeta de salida creada automáticamente");
             }
 
             OutputFolderPath = outputFolder;
@@ -110,7 +178,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
                     
                     // Copiar el archivo
                     File.Copy(sourceTemplatePath, defaultTemplatePath, true);
-                    AddLog($"📋 Plantilla copiada desde la raíz del proyecto");
+                    _logger.LogInformation($"📋 Plantilla copiada desde la raíz del proyecto");
                 }
                 else
                 {
@@ -122,17 +190,17 @@ public partial class DocumentGenerationViewModel : ObservableObject
             if (File.Exists(defaultTemplatePath))
             {
                 TemplateFilePath = defaultTemplatePath;
-                AddLog($"🎨 Plantilla cargada automáticamente: {DEFAULT_TEMPLATE_FILE}");
+                _logger.LogInformation($"🎨 Plantilla cargada automáticamente: {DEFAULT_TEMPLATE_FILE}");
             }
             else
             {                _logger.LogWarning("No se encontró la plantilla por defecto en {TemplatePath}", defaultTemplatePath);
-                AddLog("⚠️ No se encontró la plantilla por defecto. Se usará fondo blanco.");
+                _logger.LogWarning("⚠️ No se encontró la plantilla por defecto. Se usará fondo blanco.");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al inicializar rutas por defecto");
-            AddLog($"❌ Error al configurar rutas: {ex.Message}");
+            _logger.LogError(ex, "❌ Error al configurar rutas: {Message}", ex.Message);
         }
     }
 
@@ -170,7 +238,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
                         if (File.Exists(sourcePath))
                         {
                             File.Copy(sourcePath, destPath, true);
-                            AddLog($"📋 Archivo {file} copiado a la carpeta Assets del directorio de salida");
+                            _logger.LogInformation($"📋 Archivo {file} copiado a la carpeta Assets del directorio de salida");
                         }
                     }
                 }
@@ -179,7 +247,146 @@ public partial class DocumentGenerationViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al asegurar el directorio Assets");
-            AddLog($"❌ Error al configurar carpeta Assets: {ex.Message}");
+            _logger.LogError(ex, "❌ Error al configurar carpeta Assets: {Message}", ex.Message);        }
+    }    /// <summary>
+    /// Carga la configuración SMTP desde el servicio de configuración
+    /// </summary>
+    private void LoadSmtpConfiguration()
+    {
+        try
+        {
+            _logger.LogInformation("🔄 INICIO LoadSmtpConfiguration()");
+            
+            var smtpConfig = _configurationService.Current.Smtp;
+            
+            _logger.LogInformation("🔍 DATOS LEÍDOS: Server='{Server}', Username='{Username}', Port={Port}, UseSSL={UseSSL}, IsConfigured={IsConfigured}",
+                smtpConfig.Server ?? "[VACÍO]", smtpConfig.Username ?? "[VACÍO]", smtpConfig.Port, smtpConfig.UseSSL, smtpConfig.IsConfigured);
+              
+            // Cargar datos de configuración SMTP (excepto contraseña)
+            SmtpServer = smtpConfig.Server ?? string.Empty;
+            SmtpPort = smtpConfig.Port;
+            SmtpUsername = smtpConfig.Username ?? string.Empty;
+            EnableSsl = smtpConfig.UseSSL;
+            IsEmailConfigured = smtpConfig.IsConfigured;
+            
+            _logger.LogInformation("🔄 VALORES ASIGNADOS: SmtpServer='{Server}', SmtpUsername='{Username}', SmtpPort={Port}, EnableSsl={EnableSsl}, IsEmailConfigured={IsConfigured}",
+                SmtpServer, SmtpUsername, SmtpPort, EnableSsl, IsEmailConfigured);
+            
+            // Notificar cambios de propiedades explícitamente
+            OnPropertyChanged(nameof(SmtpServer));
+            OnPropertyChanged(nameof(SmtpPort));
+            OnPropertyChanged(nameof(SmtpUsername));
+            OnPropertyChanged(nameof(EnableSsl));
+            OnPropertyChanged(nameof(IsEmailConfigured));
+            
+            // Cargar contraseña desde Windows Credential Manager
+            if (!string.IsNullOrWhiteSpace(smtpConfig.Username))
+            {
+                var credentialTarget = $"SMTP_{smtpConfig.Server}_{smtpConfig.Username}";
+                _logger.LogInformation("🔍 Buscando credenciales con target: '{CredentialTarget}'", credentialTarget);
+                
+                if (_credentialService.CredentialsExist(credentialTarget))
+                {
+                    var (username, password) = _credentialService.GetCredentials(credentialTarget);
+                    SmtpPassword = password;
+                    OnPropertyChanged(nameof(SmtpPassword));
+                    _logger.LogInformation("🔐 ✅ Contraseña SMTP cargada desde Windows Credential Manager para usuario: {Username}", username);
+                }
+                else
+                {
+                    SmtpPassword = string.Empty;
+                    OnPropertyChanged(nameof(SmtpPassword));
+                    _logger.LogInformation("⚠️ No se encontraron credenciales SMTP en Windows Credential Manager para target: '{CredentialTarget}'", credentialTarget);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("ℹ️ Username está vacío, no se buscarán credenciales");
+            }
+            
+            // Cargar datos adicionales de email
+            if (!string.IsNullOrWhiteSpace(smtpConfig.FromEmail))
+            {
+                // Aquí podrías cargar otros datos como FromEmail si es necesario en el ViewModel
+            }
+            
+            if (smtpConfig.IsConfigured)
+            {
+                _logger.LogInformation("✅ Configuración SMTP cargada desde configuración persistente");
+            }
+            else
+            {
+                _logger.LogInformation("ℹ️ No hay configuración SMTP guardada");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al cargar configuración SMTP");
+            // Mantener valores por defecto en caso de error
+            IsEmailConfigured = false;
+            SmtpPassword = string.Empty;
+        }
+    }    /// <summary>
+    /// Guarda la configuración SMTP actual en el servicio de configuración
+    /// </summary>
+    private async Task SaveSmtpConfigurationAsync()
+    {
+        try
+        {
+            _logger.LogInformation("🔄 INICIO SaveSmtpConfigurationAsync()");
+            _logger.LogInformation("🔍 VALORES A GUARDAR: SmtpServer='{Server}', SmtpUsername='{Username}', SmtpPort={Port}, EnableSsl={EnableSsl}",
+                SmtpServer, SmtpUsername, SmtpPort, EnableSsl);
+            
+            var smtpConfig = _configurationService.Current.Smtp;
+            
+            // Actualizar configuración con los valores actuales del ViewModel (excepto contraseña)
+            smtpConfig.Server = SmtpServer;
+            smtpConfig.Port = SmtpPort;
+            smtpConfig.Username = SmtpUsername;
+            smtpConfig.FromEmail = SmtpUsername; // Sincronizar fromEmail con username
+            // ❌ NO guardar contraseña en JSON: smtpConfig.Password = SmtpPassword;
+            smtpConfig.UseSSL = EnableSsl;
+            smtpConfig.UseAuthentication = !string.IsNullOrWhiteSpace(SmtpUsername);
+            
+            _logger.LogInformation("🔄 VALORES ASIGNADOS A CONFIG: Server='{Server}', Username='{Username}', FromEmail='{FromEmail}', Port={Port}, UseSSL={UseSSL}, UseAuthentication={UseAuth}",
+                smtpConfig.Server, smtpConfig.Username, smtpConfig.FromEmail, smtpConfig.Port, smtpConfig.UseSSL, smtpConfig.UseAuthentication);
+            
+            // Guardar contraseña de forma segura en Windows Credential Manager
+            if (!string.IsNullOrWhiteSpace(SmtpUsername) && !string.IsNullOrWhiteSpace(SmtpPassword))
+            {
+                var credentialTarget = $"SMTP_{SmtpServer}_{SmtpUsername}";
+                _logger.LogInformation("🔐 Guardando credenciales con target: '{CredentialTarget}', Username: '{Username}'", credentialTarget, SmtpUsername);
+                
+                var credentialsSaved = _credentialService.SaveCredentials(credentialTarget, SmtpUsername, SmtpPassword);
+                
+                if (credentialsSaved)
+                {
+                    _logger.LogInformation("🔐 ✅ Contraseña SMTP guardada exitosamente en Windows Credential Manager");
+                }                else
+                {
+                    _logger.LogWarning("🔐 ❌ ERROR: No se pudo guardar la contraseña SMTP en Windows Credential Manager");
+                    throw new InvalidOperationException("No se pudo guardar la contraseña de forma segura");
+                }
+            }
+            else
+            {
+                _logger.LogWarning("⚠️ Username o Password están vacíos, no se guardarán credenciales. Username: '{Username}', Password: {HasPassword}",
+                    SmtpUsername, !string.IsNullOrWhiteSpace(SmtpPassword) ? "SÍ TIENE" : "VACÍO");
+            }            
+            // Validar y marcar como configurado
+            smtpConfig.ValidateConfiguration();
+            _logger.LogInformation("🔄 Configuración validada, IsConfigured: {IsConfigured}", smtpConfig.IsConfigured);
+            
+            // Guardar configuración (sin contraseña)
+            _logger.LogInformation("💾 Guardando configuración en archivo...");
+            await _configurationService.SaveAsync();
+            
+            _logger.LogInformation("✅ FIN SaveSmtpConfigurationAsync() - Configuración SMTP guardada correctamente");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ ERROR en SaveSmtpConfigurationAsync()");
+            throw;
         }
     }
 
@@ -196,7 +403,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
 
             if (dialog.ShowDialog() == true)
             {                SelectedExcelFilePath = dialog.FileName;
-                AddLog($"📄 Archivo seleccionado: {Path.GetFileName(SelectedExcelFilePath)}");
+                _logger.LogInformation($"📄 Archivo seleccionado: {Path.GetFileName(SelectedExcelFilePath)}");
                 
                 // Forzar la notificación de cambio de propiedad para re-evaluar los CanExecute
                 OnPropertyChanged(nameof(SelectedExcelFilePath));
@@ -212,17 +419,17 @@ public partial class DocumentGenerationViewModel : ObservableObject
                     var companies = await _pdfGenerator.GetCompaniesPreviewAsync(SelectedExcelFilePath);
                     var companiesList = companies.ToList();
                     
-                    AddLog($"✅ Archivo válido. Se encontraron {companiesList.Count} empresas");
+                    _logger.LogInformation($"✅ Archivo válido. Se encontraron {companiesList.Count} empresas");
                     if (companiesList.Count > 0)
                     {
-                        AddLog($"📊 Empresas encontradas: {string.Join(", ", companiesList.Take(5))}" + 
+                        _logger.LogInformation($"📊 Empresas encontradas: {string.Join(", ", companiesList.Take(5))}" + 
                                (companiesList.Count > 5 ? "..." : ""));
                     }
                     StatusMessage = $"Archivo válido - {companiesList.Count} empresas encontradas";
                 }
                 else
                 {
-                    AddLog("❌ El archivo Excel no tiene la estructura esperada");
+                    _logger.LogInformation("❌ El archivo Excel no tiene la estructura esperada");
                     StatusMessage = "Error: Archivo Excel inválido";
                 }
             }
@@ -230,7 +437,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al seleccionar archivo Excel");
-            AddLog($"❌ Error al seleccionar archivo: {ex.Message}");
+            _logger.LogInformation($"❌ Error al seleccionar archivo: {ex.Message}");
             StatusMessage = "Error al seleccionar archivo";
         }
     }
@@ -250,14 +457,14 @@ public partial class DocumentGenerationViewModel : ObservableObject
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 OutputFolderPath = dialog.SelectedPath;
-                AddLog($"📁 Carpeta de destino: {OutputFolderPath}");
+                _logger.LogInformation($"📁 Carpeta de destino: {OutputFolderPath}");
                 StatusMessage = "Carpeta de destino actualizada";
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al seleccionar carpeta de destino");
-            AddLog($"❌ Error al seleccionar carpeta: {ex.Message}");
+            _logger.LogInformation($"❌ Error al seleccionar carpeta: {ex.Message}");
         }
     }    [RelayCommand(CanExecute = nameof(CanSelectTemplateFile))]
     private void SelectTemplateFile()
@@ -274,20 +481,20 @@ public partial class DocumentGenerationViewModel : ObservableObject
             {
                 TemplateFilePath = dialog.FileName;
                 UseDefaultTemplate = true;
-                AddLog($"🎨 Plantilla personalizada seleccionada: {Path.GetFileName(TemplateFilePath)}");
+                _logger.LogInformation($"🎨 Plantilla personalizada seleccionada: {Path.GetFileName(TemplateFilePath)}");
                 StatusMessage = "Plantilla de fondo configurada";
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al seleccionar plantilla");
-            AddLog($"❌ Error al seleccionar plantilla: {ex.Message}");
+            _logger.LogInformation($"❌ Error al seleccionar plantilla: {ex.Message}");
         }
     }    [RelayCommand]
     private void ClearTemplate()
     {
         UseDefaultTemplate = false;
-        AddLog("🗑️ Uso de plantilla desactivado");
+        _logger.LogInformation("🗑️ Uso de plantilla desactivado");
         StatusMessage = "Plantilla desactivada - se usará fondo blanco";
         OnPropertyChanged(nameof(TemplateStatusMessage));
     }
@@ -303,7 +510,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
             _cancellationTokenSource = new CancellationTokenSource();
             GeneratedDocuments = new List<GeneratedPdfInfo>();
             
-            AddLog("🚀 Iniciando generación de documentos PDF...");
+            _logger.LogInformation("🚀 Iniciando generación de documentos PDF...");
             StatusMessage = "Generando documentos...";
             
             var progress = new Progress<(int current, int total, string status)>(report =>
@@ -315,18 +522,18 @@ public partial class DocumentGenerationViewModel : ObservableObject
                     ProgressValue = (double)report.current / report.total * 100;
                 }
                 StatusMessage = report.status;
-                AddLog($"📝 {report.status} ({report.current}/{report.total})");            });
+                _logger.LogInformation($"📝 {report.status} ({report.current}/{report.total})");            });
 
             // Determinar si se debe usar la plantilla
             string? templatePath = null;
             if (UseDefaultTemplate && !string.IsNullOrEmpty(TemplateFilePath)) 
             {
                 templatePath = TemplateFilePath;
-                AddLog($"🎨 Usando plantilla: {Path.GetFileName(TemplateFilePath)}");
+                _logger.LogInformation($"🎨 Usando plantilla: {Path.GetFileName(TemplateFilePath)}");
             }
             else
             {
-                AddLog("⚪ Generando documentos sin plantilla de fondo");
+                _logger.LogInformation("⚪ Generando documentos sin plantilla de fondo");
             }
             
             var result = await _pdfGenerator.GenerateEstadosCuentaAsync(
@@ -337,8 +544,8 @@ public partial class DocumentGenerationViewModel : ObservableObject
                 _cancellationTokenSource.Token);
 
             GeneratedDocuments = result;
-              AddLog($"🎉 Generación completada exitosamente!");
-            AddLog($"📊 Documentos generados: {result.Count}");
+              _logger.LogInformation($"🎉 Generación completada exitosamente!");
+            _logger.LogInformation($"📊 Documentos generados: {result.Count}");
             
             if (result.Count > 0)
             {
@@ -354,8 +561,8 @@ public partial class DocumentGenerationViewModel : ObservableObject
                         return 0;
                     }
                 });
-                AddLog($"💾 Tamaño total: {FormatFileSize(totalSize)}");
-                AddLog($"📁 Ubicación: {OutputFolderPath}");
+                _logger.LogInformation($"💾 Tamaño total: {FormatFileSize(totalSize)}");
+                _logger.LogInformation($"📁 Ubicación: {OutputFolderPath}");
             }
             
             StatusMessage = $"Completado - {result.Count} documentos generados";
@@ -363,13 +570,13 @@ public partial class DocumentGenerationViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            AddLog("⏹️ Generación cancelada por el usuario");
+            _logger.LogInformation("⏹️ Generación cancelada por el usuario");
             StatusMessage = "Generación cancelada";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error durante la generación de documentos");
-            AddLog($"❌ Error durante la generación: {ex.Message}");
+            _logger.LogInformation($"❌ Error durante la generación: {ex.Message}");
             StatusMessage = "Error durante la generación";
         }
         finally
@@ -384,7 +591,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private void CancelGeneration()
     {
         _cancellationTokenSource?.Cancel();
-        AddLog("⏹️ Solicitando cancelación...");
+        _logger.LogInformation("⏹️ Solicitando cancelación...");
         StatusMessage = "Cancelando...";
     }
 
@@ -403,17 +610,17 @@ public partial class DocumentGenerationViewModel : ObservableObject
             if (Directory.Exists(OutputFolderPath))
             {
                 System.Diagnostics.Process.Start("explorer.exe", OutputFolderPath);
-                AddLog($"📂 Abriendo carpeta: {OutputFolderPath}");
+                _logger.LogInformation($"📂 Abriendo carpeta: {OutputFolderPath}");
             }
             else
             {
-                AddLog("❌ La carpeta de destino no existe");
+                _logger.LogInformation("❌ La carpeta de destino no existe");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al abrir carpeta de destino");
-            AddLog($"❌ Error al abrir carpeta: {ex.Message}");
+            _logger.LogInformation($"❌ Error al abrir carpeta: {ex.Message}");
         }
     }
 
@@ -433,44 +640,44 @@ public partial class DocumentGenerationViewModel : ObservableObject
                 Path.Combine(Environment.CurrentDirectory, "Assets", DEFAULT_TEMPLATE_FILE)
             };
             
-            AddLog("\n🔍 INFORMACIÓN DE DEPURACIÓN:");
-            AddLog($"📂 Directorio de la aplicación: {appDirectory}");
-            AddLog($"📂 Directorio raíz del proyecto: {projectRoot}");
-            AddLog($"📂 Directorio actual: {Environment.CurrentDirectory}");
+            _logger.LogInformation("\n🔍 INFORMACIÓN DE DEPURACIÓN:");
+            _logger.LogInformation($"📂 Directorio de la aplicación: {appDirectory}");
+            _logger.LogInformation($"📂 Directorio raíz del proyecto: {projectRoot}");
+            _logger.LogInformation($"📂 Directorio actual: {Environment.CurrentDirectory}");
             
-            AddLog("\n🔎 BÚSQUEDA DE PLANTILLA:");
+            _logger.LogInformation("\n🔎 BÚSQUEDA DE PLANTILLA:");
             foreach (var path in possiblePaths)
             {
                 bool exists = File.Exists(path);
-                AddLog($"  - {path}: {(exists ? "✅ ENCONTRADO" : "❌ NO EXISTE")}");
+                _logger.LogInformation($"  - {path}: {(exists ? "✅ ENCONTRADO" : "❌ NO EXISTE")}");
             }
             
             // Verificar carpeta Assets en la salida
             var outputAssetsDir = Path.Combine(appDirectory, "Assets");
             bool assetsExists = Directory.Exists(outputAssetsDir);
-            AddLog($"\n📁 Carpeta Assets en directorio de salida: {(assetsExists ? "✅ EXISTE" : "❌ NO EXISTE")}");
+            _logger.LogInformation($"\n📁 Carpeta Assets en directorio de salida: {(assetsExists ? "✅ EXISTE" : "❌ NO EXISTE")}");
             
             if (assetsExists)
             {
                 var files = Directory.GetFiles(outputAssetsDir);
-                AddLog($"   Archivos en Assets ({files.Length}):");
+                _logger.LogInformation($"   Archivos en Assets ({files.Length}):");
                 foreach (var file in files)
                 {
-                    AddLog($"   - {Path.GetFileName(file)}");
+                    _logger.LogInformation($"   - {Path.GetFileName(file)}");
                 }
             }
             
             // Estado actual
-            AddLog($"\n📄 ESTADO ACTUAL:");
-            AddLog($"   Plantilla actual: {(string.IsNullOrEmpty(TemplateFilePath) ? "No configurada" : TemplateFilePath)}");
-            AddLog($"   Usar plantilla predeterminada: {UseDefaultTemplate}");
-            AddLog($"   {TemplateStatusMessage}");
+            _logger.LogInformation($"\n📄 ESTADO ACTUAL:");
+            _logger.LogInformation($"   Plantilla actual: {(string.IsNullOrEmpty(TemplateFilePath) ? "No configurada" : TemplateFilePath)}");
+            _logger.LogInformation($"   Usar plantilla predeterminada: {UseDefaultTemplate}");
+            _logger.LogInformation($"   {TemplateStatusMessage}");
             
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al mostrar información de depuración");
-            AddLog($"❌ Error al generar información de depuración: {ex.Message}");
+            _logger.LogInformation($"❌ Error al generar información de depuración: {ex.Message}");
         }
     }    // Métodos CanExecute
     private bool CanSelectExcelFile() => !IsProcessing;
@@ -480,29 +687,308 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private bool CanCancelGeneration() => IsProcessing;
     private bool CanOpenOutputFolder() => !string.IsNullOrEmpty(OutputFolderPath);
 
-    private void AddLog(string message)
+    #region Comandos de Email    /// <summary>
+    /// Comando para configurar SMTP
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanConfigureSmtp))]
+    private async Task ConfigureSmtpAsync(CancellationToken cancellationToken = default)
     {
-        var timestamp = DateTime.Now.ToString("HH:mm:ss");
-        LogText += $"[{timestamp}] {message}\n";
-        
-        // Limitar el log a las últimas 1000 líneas para evitar problemas de memoria
-        var lines = LogText.Split('\n');
-        if (lines.Length > 1000)
+        if (_emailService == null)
         {
-            LogText = string.Join("\n", lines.Skip(lines.Length - 1000));
+            _logger.LogInformation("❌ Servicio de email no disponible");
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("🔧 Configurando servidor SMTP...");
+
+            var smtpConfig = new SmtpConfiguration
+            {
+                SmtpServer = SmtpServer,
+                Port = SmtpPort,
+                Username = SmtpUsername,
+                Password = SmtpPassword,
+                EnableSsl = EnableSsl
+            };
+
+            await _emailService.ConfigureSmtpAsync(smtpConfig, cancellationToken);
+            
+            IsEmailConfigured = await _emailService.ValidateConfigurationAsync(cancellationToken);
+            
+            if (IsEmailConfigured)
+            {
+                // Guardar configuración SMTP persistente
+                await SaveSmtpConfigurationAsync();
+                
+                _logger.LogInformation("✅ Configuración SMTP exitosa y guardada");
+                StatusMessage = "SMTP configurado correctamente";
+            }
+            else
+            {
+                _logger.LogInformation("❌ Error en la configuración SMTP");
+                StatusMessage = "Error en configuración SMTP";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al configurar SMTP");
+            _logger.LogInformation($"❌ Error configurando SMTP: {ex.Message}");
+            IsEmailConfigured = false;
         }
     }
 
+    /// <summary>
+    /// Comando para enviar email de prueba
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanSendTestEmail))]
+    private async Task SendTestEmailAsync(CancellationToken cancellationToken = default)
+    {
+        if (_emailService == null)
+        {
+            _logger.LogInformation("❌ Servicio de email no disponible");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(EmailRecipients))
+        {
+            _logger.LogInformation("❌ Debe especificar al menos un destinatario");
+            return;
+        }
+
+        try
+        {
+            IsSendingEmail = true;
+            _logger.LogInformation("📧 Enviando correo de prueba...");
+
+            var recipients = ParseEmailList(EmailRecipients);
+            var result = await _emailService.SendTestEmailAsync(recipients.First(), cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation($"✅ {result.Message}");
+                StatusMessage = "Correo de prueba enviado";
+            }
+            else
+            {
+                _logger.LogInformation($"❌ {result.Message}");
+                if (!string.IsNullOrEmpty(result.ErrorDetails))
+                    _logger.LogInformation($"   Detalles: {result.ErrorDetails}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar correo de prueba");
+            _logger.LogInformation($"❌ Error enviando correo de prueba: {ex.Message}");
+        }
+        finally
+        {
+            IsSendingEmail = false;
+        }
+    }
+
+    /// <summary>
+    /// Comando para enviar documentos por email
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanSendDocumentsByEmail))]
+    private async Task SendDocumentsByEmailAsync(CancellationToken cancellationToken = default)
+    {
+        if (_emailService == null)
+        {
+            _logger.LogInformation("❌ Servicio de email no disponible");
+            return;
+        }
+
+        if (!GeneratedDocuments.Any())
+        {
+            _logger.LogInformation("❌ No hay documentos generados para enviar");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(EmailRecipients))
+        {
+            _logger.LogInformation("❌ Debe especificar al menos un destinatario");
+            return;
+        }
+
+        try
+        {
+            IsSendingEmail = true;
+            _logger.LogInformation("📧 Enviando documentos por correo...");
+
+            var recipients = ParseEmailList(EmailRecipients);
+            var attachmentPaths = GeneratedDocuments.Select(d => d.FilePath).ToList();
+
+            var emailInfo = new EmailInfo
+            {
+                Recipients = recipients,
+                Subject = EmailSubject,
+                Body = UseHtmlEmail ? _emailService.GetEmailHtmlTemplate(EmailBody) : EmailBody,
+                IsBodyHtml = UseHtmlEmail,
+                CcRecipient = string.IsNullOrWhiteSpace(EmailCc) ? null : EmailCc,
+                BccRecipient = string.IsNullOrWhiteSpace(EmailBcc) ? null : EmailBcc
+            };
+
+            var result = await _emailService.SendEmailWithAttachmentsAsync(emailInfo, attachmentPaths, cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation($"✅ {result.Message}");
+                _logger.LogInformation($"   📎 {attachmentPaths.Count} archivos adjuntos ({result.TotalAttachmentSizeKb} KB)");
+                _logger.LogInformation($"   👥 {result.ProcessedRecipients} destinatarios");
+                StatusMessage = "Documents enviados por email";
+            }
+            else
+            {
+                _logger.LogInformation($"❌ {result.Message}");
+                if (!string.IsNullOrEmpty(result.ErrorDetails))
+                    _logger.LogInformation($"   Detalles: {result.ErrorDetails}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar documentos por email");
+            _logger.LogInformation($"❌ Error enviando documentos: {ex.Message}");
+        }
+        finally
+        {
+            IsSendingEmail = false;
+        }
+    }
+
+    /// <summary>
+    /// Comando para limpiar configuración de email
+    /// </summary>
+    [RelayCommand]
+    private void ClearEmailConfiguration()
+    {
+        SmtpServer = string.Empty;
+        SmtpPort = 587;
+        SmtpUsername = string.Empty;
+        SmtpPassword = string.Empty;
+        EnableSsl = true;
+        IsEmailConfigured = false;
+        _logger.LogInformation("🧹 Configuración de email limpiada");
+    }
+
+    #endregion
+
+    #region Métodos CanExecute para Email
+
+    private bool CanConfigureSmtp() => !IsProcessing && !IsSendingEmail && 
+        !string.IsNullOrWhiteSpace(SmtpServer) && 
+        !string.IsNullOrWhiteSpace(SmtpUsername) && 
+        !string.IsNullOrWhiteSpace(SmtpPassword);
+
+    private bool CanSendTestEmail() => !IsProcessing && !IsSendingEmail && 
+        IsEmailConfigured && 
+        !string.IsNullOrWhiteSpace(EmailRecipients);
+
+    private bool CanSendDocumentsByEmail() => !IsProcessing && !IsSendingEmail && 
+        IsEmailConfigured && 
+        GeneratedDocuments.Any() && 
+        !string.IsNullOrWhiteSpace(EmailRecipients) && 
+        !string.IsNullOrWhiteSpace(EmailSubject);
+
+    #endregion
+
+    #region Métodos Auxiliares para Email
+
+    /// <summary>
+    /// Parsea una lista de emails separados por coma o punto y coma
+    /// </summary>
+    private List<string> ParseEmailList(string emailList)
+    {
+        if (string.IsNullOrWhiteSpace(emailList))
+            return new List<string>();
+
+        return emailList
+            .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(email => email.Trim())
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Formatea el tamaño de archivo en una representación legible
+    /// </summary>
     private static string FormatFileSize(long bytes)
     {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
+        if (bytes == 0) return "0 bytes";
+
+        string[] suffixes = { "bytes", "KB", "MB", "GB", "TB" };
+        double size = bytes;
+        int suffixIndex = 0;
+
+        while (size >= 1024 && suffixIndex < suffixes.Length - 1)
         {
-            order++;
-            len = len / 1024;
+            size /= 1024;
+            suffixIndex++;
         }
-        return $"{len:0.##} {sizes[order]}";
+
+        return $"{size:F2} {suffixes[suffixIndex]}";
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Maneja los cambios automáticos de configuración para sincronizar el ViewModel
+    /// </summary>
+    private void OnConfigurationChanged(object? sender, GestLog.Services.Configuration.ConfigurationChangedEventArgs e)
+    {
+        try
+        {
+            // Solo recargar si el cambio está relacionado con SMTP
+            if (e.SettingPath.StartsWith("smtp", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogDebug("🔄 Configuración SMTP cambió externamente - recargando en ViewModel");
+                LoadSmtpConfiguration();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al manejar cambio de configuración automático");
+        }
+    }
+
+    /// <summary>
+    /// Recarga manualmente la configuración SMTP desde el servicio de configuración
+    /// </summary>
+    public void RefreshSmtpConfiguration()
+    {
+        try
+        {
+            _logger.LogInformation("🔄 Recargando configuración SMTP manualmente");
+            LoadSmtpConfiguration();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al recargar configuración SMTP manualmente");
+        }
+    }
+    
+    /// <summary>
+    /// Limpia recursos y desuscribe eventos
+    /// </summary>
+    public void Dispose()
+    {
+        try
+        {
+            // Desuscribirse de eventos para evitar memory leaks
+            if (_configurationService != null)
+            {
+                _configurationService.ConfigurationChanged -= OnConfigurationChanged;
+            }
+            
+            // Cancelar operaciones en curso
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            
+            _logger.LogDebug("🧹 DocumentGenerationViewModel recursos limpiados");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al limpiar recursos del ViewModel");
+        }
     }
 }

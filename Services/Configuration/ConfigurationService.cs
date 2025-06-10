@@ -124,13 +124,18 @@ public class ConfigurationService : IConfigurationService
             _logger.LogDebug("💾 Guardando configuración en {FilePath}", _configFilePath);
 
             // Actualizar timestamp de modificación
-            _current.LastModified = DateTime.Now;
-
-            // Validar configuración antes de guardar
+            _current.LastModified = DateTime.Now;            // Validar configuración antes de guardar
             var validationErrors = await ValidateAsync();            if (validationErrors.Any())
             {
                 var errorMessage = $"Configuración inválida: {string.Join(", ", validationErrors)}";
-                _logger.LogError(new InvalidOperationException(errorMessage), "Error de validación de configuración");
+                _logger.LogInformation("❌ ERRORES DE VALIDACIÓN al guardar configuración: {0}", errorMessage);
+                
+                // Log cada error individualmente para mejor diagnóstico
+                foreach (var error in validationErrors)
+                {
+                    _logger.LogInformation("  - {0}", error);
+                }
+                
                 OnConfigurationSaved(new ConfigurationSavedEventArgs(_current, false, errorMessage));
                 return;
             }
@@ -249,9 +254,11 @@ public class ConfigurationService : IConfigurationService
                         break;
                     case "logging":
                         _current.Logging = new LoggingSettings();
-                        break;
-                    case "performance":
+                        break;                    case "performance":
                         _current.Performance = new PerformanceSettings();
+                        break;
+                    case "smtp":
+                        _current.Smtp = new SmtpSettings();
                         break;
                     case "modules":
                         _current.Modules = new ModulesConfiguration();
@@ -300,14 +307,31 @@ public class ConfigurationService : IConfigurationService
                 errors.Add("El número máximo de archivos de log debe ser mayor a 0");
 
             if (_current.Logging.MaxFileSizeBytes < 1024)
-                errors.Add("El tamaño máximo de archivo debe ser mayor a 1KB");
-
-            // Validar configuraciones de rendimiento
+                errors.Add("El tamaño máximo de archivo debe ser mayor a 1KB");            // Validar configuraciones de rendimiento
             if (_current.Performance.MaxConcurrentOperations < 1)
                 errors.Add("El número de operaciones concurrentes debe ser mayor a 0");
 
             if (_current.Performance.ProgressUpdateInterval < 50)
                 errors.Add("El intervalo de actualización debe ser mayor a 50ms");
+
+            // Validar configuraciones SMTP
+            if (_current.Smtp.IsConfigured)
+            {
+                if (string.IsNullOrWhiteSpace(_current.Smtp.Server))
+                    errors.Add("El servidor SMTP es requerido");
+
+                if (_current.Smtp.Port <= 0 || _current.Smtp.Port > 65535)
+                    errors.Add("El puerto SMTP debe estar entre 1 y 65535");
+
+                if (string.IsNullOrWhiteSpace(_current.Smtp.FromEmail))
+                    errors.Add("El email del remitente es requerido");
+
+                if (_current.Smtp.UseAuthentication && string.IsNullOrWhiteSpace(_current.Smtp.Username))
+                    errors.Add("El usuario SMTP es requerido cuando la autenticación está habilitada");
+
+                if (_current.Smtp.Timeout < 1000)
+                    errors.Add("El timeout SMTP debe ser mayor a 1000ms");
+            }
 
             _logger.LogDebug("🔍 Validación completada. {ErrorCount} errores encontrados", errors.Count);
         }
@@ -392,9 +416,9 @@ public class ConfigurationService : IConfigurationService
         // Configurar handlers para detectar cambios en toda la jerarquía
         config.PropertyChanged += OnConfigurationPropertyChanged;
         config.General.PropertyChanged += OnConfigurationPropertyChanged;
-        config.UI.PropertyChanged += OnConfigurationPropertyChanged;
-        config.Logging.PropertyChanged += OnConfigurationPropertyChanged;
+        config.UI.PropertyChanged += OnConfigurationPropertyChanged;        config.Logging.PropertyChanged += OnConfigurationPropertyChanged;
         config.Performance.PropertyChanged += OnConfigurationPropertyChanged;
+        config.Smtp.PropertyChanged += OnConfigurationPropertyChanged;
         config.Modules.PropertyChanged += OnConfigurationPropertyChanged;
         config.Modules.DaaterProcessor.PropertyChanged += OnConfigurationPropertyChanged;
         config.Modules.ErrorLog.PropertyChanged += OnConfigurationPropertyChanged;
