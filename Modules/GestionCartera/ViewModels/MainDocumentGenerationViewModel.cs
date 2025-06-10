@@ -157,12 +157,11 @@ public partial class MainDocumentGenerationViewModel : ObservableObject
         try
         {
             _logger.LogInformation("🔄 Inicializando componentes del MainDocumentGenerationViewModel...");
-            
-            // Cargar configuración SMTP
+              // Cargar configuración SMTP
             await SmtpConfiguration.LoadSmtpConfigurationAsync();
             
-            // Cargar documentos previamente generados
-            await DocumentManagement.LoadPreviouslyGeneratedDocuments();
+            // NOTA: Los documentos se cargarán cuando se seleccione el archivo Excel de emails
+            // await DocumentManagement.LoadPreviouslyGeneratedDocuments();
             
             // Sincronizar estados iniciales
             AutomaticEmail.UpdateGeneratedDocuments(DocumentManagement.GeneratedDocuments);

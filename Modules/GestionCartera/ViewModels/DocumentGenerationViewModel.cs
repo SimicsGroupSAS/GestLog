@@ -25,9 +25,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
         _mainViewModel = new MainDocumentGenerationViewModel(pdfGenerator, null!, logger);
         
         InitializeAsync();
-    }
-
-    public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IEmailService emailService, IGestLogLogger logger)
+    }    public DocumentGenerationViewModel(IPdfGeneratorService pdfGenerator, IEmailService emailService, IGestLogLogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mainViewModel = new MainDocumentGenerationViewModel(pdfGenerator, emailService, logger);
@@ -40,6 +38,13 @@ public partial class DocumentGenerationViewModel : ObservableObject
         try
         {
             await _mainViewModel.InitializeAsync();
+            
+            // Suscribirse a eventos de cambio de propiedad de los sub-ViewModels
+            _mainViewModel.PdfGeneration.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+            _mainViewModel.DocumentManagement.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+            _mainViewModel.AutomaticEmail.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+            _mainViewModel.SmtpConfiguration.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+            _mainViewModel.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
         }
         catch (Exception ex)
         {

@@ -23,8 +23,9 @@ public partial class DocumentManagementViewModel : BaseDocumentGenerationViewMod
     public DocumentManagementViewModel(IGestLogLogger logger) : base(logger)
     {
         InitializeOutputPath();
-        
-        // Cargar documentos previamente generados si existen
+          // Cargar documentos previamente generados si existen
+        // Comentado para evitar carga automática - ahora se carga solo cuando se selecciona archivo Excel
+        /*
         _ = Task.Run(async () =>
         {
             try
@@ -36,6 +37,7 @@ public partial class DocumentManagementViewModel : BaseDocumentGenerationViewMod
                 _logger.LogWarning(ex, "No se pudieron cargar documentos previos en el constructor");
             }
         });
+        */
     }
 
     private void InitializeOutputPath()
@@ -95,9 +97,7 @@ public partial class DocumentManagementViewModel : BaseDocumentGenerationViewMod
             _logger.LogError(ex, "Error al cargar documentos previamente generados");
             StatusMessage = "Error al cargar documentos previos";
         }
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Carga documentos desde el archivo de texto generado
     /// </summary>
     private async Task<List<GeneratedPdfInfo>> LoadDocumentsFromTextFileAsync(string textFilePath)
@@ -108,50 +108,78 @@ public partial class DocumentManagementViewModel : BaseDocumentGenerationViewMod
         {
             _logger.LogInformation("📖 Leyendo archivo de documentos generados: {FilePath}", textFilePath);
             
-            var lines = await File.ReadAllLinesAsync(textFilePath);
+            var lines = await File.ReadAllLinesAsync(textFilePath) ?? Array.Empty<string>();
+            
+            string? empresa = null;
+            string? nit = null;
+            string? archivo = null;
+            string? tipo = null;
+            string? ruta = null;
             
             foreach (var line in lines)
             {
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("=") || line.StartsWith("PDF") || line.StartsWith("Total"))
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+                
+                // Líneas de separación o información general
+                if (line.StartsWith("=") || line.StartsWith("PDF") || line.StartsWith("Total") || 
+                    line.StartsWith("Fecha de generación") || line.StartsWith("--------") || 
+                    line.Trim() == "-------------------------------------------------------------")
                     continue;
                 
                 try
                 {
-                    // Formato esperado: "NombreArchivo.pdf - Empresa: NOMBRE_EMPRESA - NIT: 123456789"
-                    var parts = line.Split(new[] { " - " }, StringSplitOptions.RemoveEmptyEntries);
-                    
-                    if (parts.Length >= 3)
+                    if (line.StartsWith("Empresa: "))
                     {
-                        var fileName = parts[0].Trim();
-                        var empresaPart = parts[1].Replace("Empresa: ", "").Trim();
-                        var nitPart = parts[2].Replace("NIT: ", "").Trim();
-                        
-                        // Construir la ruta completa del archivo
-                        var fullPath = Path.Combine(OutputFolderPath, fileName);
-                        
-                        // Verificar que el archivo existe físicamente
-                        if (File.Exists(fullPath))
-                        {
-                            var document = new GeneratedPdfInfo
-                            {
-                                NombreArchivo = fileName,
-                                NombreEmpresa = empresaPart,
-                                Nit = nitPart,
-                                RutaArchivo = fullPath
-                            };
-                            
-                            documents.Add(document);
-                            _logger.LogDebug("📄 Documento cargado: {Archivo} - {Empresa} (NIT: {Nit})", 
-                                fileName, empresaPart, nitPart);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("⚠️ Archivo no encontrado: {FilePath}", fullPath);
-                        }
+                        empresa = line.Replace("Empresa: ", "").Trim();
                     }
-                    else
+                    else if (line.StartsWith("NIT: "))
                     {
-                        _logger.LogWarning("⚠️ Formato de línea inválido: {Line}", line);
+                        nit = line.Replace("NIT: ", "").Trim();
+                    }
+                    else if (line.StartsWith("Archivo: "))
+                    {
+                        archivo = line.Replace("Archivo: ", "").Trim();
+                    }
+                    else if (line.StartsWith("Tipo: "))
+                    {
+                        tipo = line.Replace("Tipo: ", "").Trim();
+                    }
+                    else if (line.StartsWith("Ruta: "))
+                    {
+                        ruta = line.Replace("Ruta: ", "").Trim();
+                        
+                        // Si tenemos ruta, es el final de un bloque de documento
+                        if (!string.IsNullOrEmpty(empresa) && !string.IsNullOrEmpty(nit) && 
+                            !string.IsNullOrEmpty(archivo) && !string.IsNullOrEmpty(ruta))
+                        {
+                            // Verificar que el archivo existe físicamente
+                            if (File.Exists(ruta))
+                            {
+                                var document = new GeneratedPdfInfo
+                                {
+                                    NombreArchivo = archivo,
+                                    NombreEmpresa = empresa,
+                                    Nit = nit,
+                                    RutaArchivo = ruta
+                                };
+                                
+                                documents.Add(document);
+                                _logger.LogDebug("📄 Documento cargado: {Archivo} - {Empresa} (NIT: {Nit})", 
+                                    archivo, empresa, nit);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("⚠️ Archivo no encontrado: {FilePath}", ruta);
+                            }
+                        }
+                        
+                        // Resetear variables para el siguiente documento
+                        empresa = null;
+                        nit = null;
+                        archivo = null;
+                        tipo = null;
+                        ruta = null;
                     }
                 }
                 catch (Exception lineEx)

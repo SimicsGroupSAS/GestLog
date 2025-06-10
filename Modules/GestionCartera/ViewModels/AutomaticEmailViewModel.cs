@@ -58,7 +58,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
             {
                 Filter = "Archivos Excel (*.xlsx)|*.xlsx|Todos los archivos (*.*)|*.*",
                 Title = "Seleccionar Archivo Excel con Correos Electrónicos"
-            };            if (openFileDialog.ShowDialog() == true)
+            };
+
+            if (openFileDialog.ShowDialog() == true)
             {
                 SelectedEmailExcelFilePath = openFileDialog.FileName;
                 HasEmailExcel = !string.IsNullOrEmpty(SelectedEmailExcelFilePath);
@@ -66,6 +68,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
                 _logger.LogInformation($"📧 Archivo de correos seleccionado: {Path.GetFileName(SelectedEmailExcelFilePath)}");
                 
                 await ValidateEmailExcelFileAsync();
+                
+                // Analizar matching con documentos generados
+                await AnalyzeEmailMatchingAsync();
             }
         }
         catch (Exception ex)
@@ -73,6 +78,188 @@ public partial class AutomaticEmailViewModel : ObservableObject
             _logger.LogError(ex, "Error al seleccionar archivo Excel de correos");
             LogText += $"\n❌ Error: {ex.Message}";
         }
+    }    /// <summary>
+    /// Analiza el matching entre documentos generados y correos del Excel
+    /// </summary>
+    private async Task AnalyzeEmailMatchingAsync()
+    {
+        if (_excelEmailService == null || string.IsNullOrEmpty(SelectedEmailExcelFilePath))
+        {
+            _logger.LogWarning("No se puede analizar matching: servicios o datos no disponibles");
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("📋 Cargando documentos generados desde pdfs_generados.txt...");
+            LogText += "\n📋 Cargando documentos generados...";
+            
+            // Primero cargar los documentos desde el archivo de texto
+            var documentsLoaded = await LoadGeneratedDocuments();
+            if (!documentsLoaded.Any())
+            {
+                _logger.LogWarning("No se encontraron documentos generados para analizar");
+                LogText += "\n⚠️ No se encontraron documentos generados";
+                return;
+            }
+
+            _logger.LogInformation("🔍 Analizando matching entre {Count} documentos y correos del Excel...", documentsLoaded.Count);
+            LogText += $"\n🔍 Analizando matching entre {documentsLoaded.Count} documentos y correos...";
+
+            // Actualizar la lista de documentos generados
+            GeneratedDocuments = documentsLoaded;
+
+            int companiesWithEmailCount = 0;
+            int companiesWithoutEmailCount = 0;
+
+            foreach (var document in GeneratedDocuments)
+            {
+                try
+                {
+                    var emails = await _excelEmailService.GetEmailsForCompanyAsync(
+                        SelectedEmailExcelFilePath,
+                        document.NombreEmpresa,
+                        document.Nit,
+                        CancellationToken.None);
+
+                    if (emails.Any())
+                    {
+                        companiesWithEmailCount++;
+                        _logger.LogDebug("✅ {Company} tiene {EmailCount} email(s)", document.NombreEmpresa, emails.Count);
+                        LogText += $"\n  ✅ {document.NombreEmpresa}: {emails.Count} email(s)";
+                    }
+                    else
+                    {
+                        companiesWithoutEmailCount++;
+                        _logger.LogDebug("❌ {Company} sin email", document.NombreEmpresa);
+                        LogText += $"\n  ❌ {document.NombreEmpresa}: sin email";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    companiesWithoutEmailCount++;
+                    _logger.LogWarning(ex, "Error analizando {Company}", document.NombreEmpresa);
+                }
+            }
+
+            CompaniesWithEmail = companiesWithEmailCount;
+            CompaniesWithoutEmail = companiesWithoutEmailCount;
+
+            _logger.LogInformation("📊 Análisis completado: {WithEmail} con email, {WithoutEmail} sin email", 
+                companiesWithEmailCount, companiesWithoutEmailCount);
+            LogText += $"\n📊 Resultado: {companiesWithEmailCount} con email, {companiesWithoutEmailCount} sin email";
+
+            // Actualizar el estado para habilitar/deshabilitar envío automático
+            OnPropertyChanged(nameof(CanSendAutomatically));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error durante análisis de matching");
+            LogText += $"\n❌ Error durante análisis: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Carga los documentos generados desde el archivo pdfs_generados.txt
+    /// </summary>
+    private async Task<List<GeneratedPdfInfo>> LoadGeneratedDocuments()
+    {
+        var documents = new List<GeneratedPdfInfo>();
+        
+        try
+        {
+            var outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Archivos", "Clientes cartera pdf");
+            var textFilePath = Path.Combine(outputPath, "pdfs_generados.txt");
+            
+            if (!File.Exists(textFilePath))
+            {
+                _logger.LogWarning("No se encontró archivo pdfs_generados.txt en: {Path}", textFilePath);
+                return documents;
+            }
+
+            _logger.LogInformation("📖 Leyendo archivo de documentos generados: {FilePath}", textFilePath);
+            
+            var lines = await File.ReadAllLinesAsync(textFilePath) ?? Array.Empty<string>();
+            
+            string? empresa = null;
+            string? nit = null;
+            string? archivo = null;
+            string? tipo = null;
+            string? ruta = null;
+            
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+                
+                // Líneas de separación o información general
+                if (line.StartsWith("=") || line.StartsWith("PDF") || line.StartsWith("Total") || 
+                    line.StartsWith("Fecha de generación") || line.StartsWith("--------") || 
+                    line.Trim() == "-------------------------------------------------------------")
+                    continue;
+                
+                if (line.StartsWith("Empresa: "))
+                {
+                    empresa = line.Replace("Empresa: ", "").Trim();
+                }
+                else if (line.StartsWith("NIT: "))
+                {
+                    nit = line.Replace("NIT: ", "").Trim();
+                }
+                else if (line.StartsWith("Archivo: "))
+                {
+                    archivo = line.Replace("Archivo: ", "").Trim();
+                }
+                else if (line.StartsWith("Tipo: "))
+                {
+                    tipo = line.Replace("Tipo: ", "").Trim();
+                }
+                else if (line.StartsWith("Ruta: "))
+                {
+                    ruta = line.Replace("Ruta: ", "").Trim();
+                    
+                    // Si tenemos ruta, es el final de un bloque de documento
+                    if (!string.IsNullOrEmpty(empresa) && !string.IsNullOrEmpty(nit) && 
+                        !string.IsNullOrEmpty(archivo) && !string.IsNullOrEmpty(ruta))
+                    {
+                        // Verificar que el archivo existe físicamente
+                        if (File.Exists(ruta))
+                        {
+                            var document = new GeneratedPdfInfo
+                            {
+                                NombreArchivo = archivo,
+                                NombreEmpresa = empresa,
+                                Nit = nit,
+                                RutaArchivo = ruta
+                            };
+                            
+                            documents.Add(document);
+                            _logger.LogDebug("📄 Documento cargado: {Archivo} - {Empresa} (NIT: {Nit})", 
+                                archivo, empresa, nit);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("⚠️ Archivo no encontrado: {FilePath}", ruta);
+                        }
+                    }
+                    
+                    // Resetear variables para el siguiente documento
+                    empresa = null;
+                    nit = null;
+                    archivo = null;
+                    tipo = null;
+                    ruta = null;
+                }
+            }
+            
+            _logger.LogInformation("✅ Documentos cargados desde archivo: {Count} documentos", documents.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error leyendo archivo de documentos generados");
+        }
+        
+        return documents;
     }
 
     public async Task<bool> SendDocumentsAutomaticallyAsync(

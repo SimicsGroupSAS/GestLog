@@ -139,8 +139,7 @@
                                     <TextBlock Text="{Binding StatusMessage}" 
                                               Foreground="#34495E" HorizontalAlignment="Right"/>
                                 </DockPanel>
-                                
-                                <ProgressBar Value="{Binding ProgressValue}" 
+                                  <ProgressBar Value="{Binding ProgressValue, Mode=OneWay}" 
                                            Height="20" Background="#BDC3C7" 
                                            Foreground="#27AE60" BorderThickness="0"/>
                                 
@@ -187,8 +186,7 @@
                                     <TextBlock Text="🔄" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBlock Text="Generando Estados de Cuenta..." 
                                               FontSize="16" FontWeight="SemiBold" 
-                                              Foreground="White" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding ProgressValue, StringFormat='{}{0:F0}%'}" 
+                                              Foreground="White" VerticalAlignment="Center"/>                                    <TextBlock Text="{Binding ProgressValue, StringFormat='{}{0:F0}%', Mode=OneWay}" 
                                               FontSize="14" FontWeight="Bold" 
                                               Foreground="#1ABC9C" 
                                               HorizontalAlignment="Right" 
@@ -201,8 +199,7 @@
                                         <!-- Background gradient -->
                                         <Border Background="#2C3E50" CornerRadius="10"/>
                                         
-                                        <!-- Main progress bar -->
-                                        <ProgressBar Value="{Binding ProgressValue}" 
+                                        <!-- Main progress bar -->                                        <ProgressBar Value="{Binding ProgressValue, Mode=OneWay}" 
                                                     Maximum="100" 
                                                     Background="Transparent"
                                                     BorderThickness="0"
@@ -720,10 +717,9 @@
                                     </StackPanel>
 
                                     <!-- Estadísticas del archivo -->
-                                    <StackPanel Visibility="{Binding HasEmailExcel, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Foreground="#2E7D32" FontSize="12">
+                                    <StackPanel Visibility="{Binding HasEmailExcel, Converter={StaticResource BooleanToVisibilityConverter}}">                                        <TextBlock Foreground="#2E7D32" FontSize="12">
                                             <Run Text="📊 Empresas con correo: "/>
-                                            <Run Text="{Binding CompaniesWithEmail}" FontWeight="Bold"/>
+                                            <Run Text="{Binding CompaniesWithEmail, Mode=OneWay}" FontWeight="Bold"/>
                                         </TextBlock>
                                         <TextBlock Text="✅ Listo para envío automático" 
                                                   Foreground="#4CAF50" FontSize="11" FontStyle="Italic" Margin="0,5,0,0"/>
