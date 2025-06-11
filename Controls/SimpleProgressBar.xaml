@@ -1,0 +1,50 @@
+<UserControl x:Class="GestLog.Controls.SimpleProgressBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:converters="clr-namespace:GestLog.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="80" d:DesignWidth="400">
+    <UserControl.Resources>
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Border Background="#F5F5F5" CornerRadius="5" Padding="15">
+        <StackPanel>
+            <!-- Encabezado con título y porcentaje -->
+            <DockPanel Margin="0,0,0,8"
+                      Visibility="{Binding ShowHeader, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                          FontWeight="SemiBold" 
+                          Foreground="#2C3E50"
+                          DockPanel.Dock="Left"
+                          VerticalAlignment="Center"/>
+                
+                <TextBlock Text="{Binding ProgressValue, RelativeSource={RelativeSource AncestorType=UserControl}, StringFormat='{}{0:F0}%'}" 
+                          Foreground="#27AE60"
+                          FontWeight="Bold"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding ShowPercentage, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </DockPanel>
+            
+            <!-- Barra de progreso -->
+            <ProgressBar Value="{Binding ProgressValue, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" 
+                        Maximum="100" 
+                        Height="12"
+                        Background="#E0E0E0"
+                        Foreground="#27AE60"
+                        BorderThickness="0"/>
+            
+            <!-- Mensaje de estado -->
+            <TextBlock Text="{Binding StatusMessage, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                      Margin="0,8,0,0"
+                      Foreground="#7F8C8D"
+                      FontSize="12"
+                      TextTrimming="CharacterEllipsis"
+                      Visibility="{Binding ShowMessage, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StackPanel>
+    </Border>
+</UserControl>

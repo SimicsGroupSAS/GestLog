@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:GestLog.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid Background="White">
@@ -39,8 +40,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                              <!-- Process Files Card -->
+                            </Grid.ColumnDefinitions>                            <!-- Process Files Card -->
                             <Border Grid.Column="0" Background="White" Padding="20" 
                                    BorderBrush="#DEE2E6" BorderThickness="1">
                                 <StackPanel>
@@ -49,7 +49,8 @@
                                               HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
                                     <TextBlock Text="Selecciona una carpeta y procesa todos los archivos Excel contenidos" 
                                               FontSize="12" Foreground="#6C757D" TextWrapping="Wrap" 
-                                              HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>                                    <Button Content="Seleccionar Carpeta y Procesar" 
+                                              HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>
+                                    <Button Content="Seleccionar Carpeta y Procesar" 
                                            Background="#17A2B8" Foreground="White" 
                                            Padding="12,8" BorderThickness="0" 
                                            FontWeight="SemiBold"
@@ -66,54 +67,38 @@
                                               HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
                                     <TextBlock Text="Aplicar filtros avanzados a los datos consolidados y exportar resultados" 
                                               FontSize="12" Foreground="#6C757D" TextWrapping="Wrap" 
-                                              HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>                                    <Button Content="Abrir Filtros" 
-                                           Background="#28A745" Foreground="White"                                           Padding="12,8" BorderThickness="0" 
+                                              HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>
+                                    <Button Content="Abrir Filtros" 
+                                           Background="#28A745" Foreground="White"
+                                           Padding="12,8" BorderThickness="0" 
                                            FontWeight="SemiBold"
                                            Click="OnOpenFilteredDataViewClick"/>
                                 </StackPanel>
                             </Border>
-                        </Grid>
-                          <!-- Progress Section -->
+                        </Grid>                        <!-- Progress Section -->
                         <StackPanel Margin="0,25,0,0">
-                            <TextBlock Text="Estado del Proceso:" FontWeight="SemiBold" FontSize="14" 
-                                      Foreground="#2C3E50" Margin="0,0,0,10"/>
-                              <!-- Status Message -->
-                            <TextBlock Text="{Binding StatusMessage}" FontSize="12" 
-                                      Foreground="#495057" Margin="0,0,0,8" 
-                                      Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>                            <!-- Progress Bar with smooth transitions -->
-                            <Grid>
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" 
-                                            Height="20" Background="#E9ECEF" 
-                                            Foreground="#28A745">
-                                    <ProgressBar.Resources>
-                                        <!-- Transición suave sin animar Width directamente -->
-                                        <Style TargetType="ProgressBar">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsProcessing}" Value="True">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetProperty="Value" 
-                                                                               From="0" Duration="0:0:0.3"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </ProgressBar.Resources>
-                                </ProgressBar>
-                                <TextBlock Text="{Binding Progress, StringFormat={}{0:F1}%}" 
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF"/>
-                            </Grid>
+                            <!-- Simple Progress Bar -->
+                            <controls:SimpleProgressBar 
+                                ProgressValue="{Binding Progress}"
+                                Title="📊 Estado del Proceso"
+                                StatusMessage="{Binding StatusMessage}"
+                                BackgroundColor="#FFFFFF"
+                                TitleColor="#2C3E50"
+                                PercentageColor="#28A745"
+                                MessageColor="#495057"
+                                BarForeground="#28A745"
+                                BarBackground="#E9ECEF"
+                                BarHeight="20"
+                                ShowHeader="True"
+                                ShowPercentage="True"
+                                ShowMessage="True"/>
                                         
                             <!-- Cancel Button -->
                             <Button Content="❌ Cancelar Operación" 
                                    Background="#DC3545" Foreground="White" 
                                    Padding="8,4" BorderThickness="0" 
                                    FontWeight="SemiBold" FontSize="11"
-                                   Margin="0,8,0,0"
+                                   Margin="0,15,0,0"
                                    Command="{Binding CancelProcessingCommand}"
                                    Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                             
