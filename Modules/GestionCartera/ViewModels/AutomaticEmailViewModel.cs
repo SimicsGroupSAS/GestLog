@@ -870,17 +870,16 @@ NIT: " + nit + @"</p>
     }    /// <summary>
     /// Genera el cuerpo de email consolidado para múltiples documentos sin destinatario
     /// </summary>
-    private string GetConsolidatedOrphanEmailBody(List<GeneratedPdfInfo> orphanDocuments)
-    {
-        var companiesList = string.Join("\n", orphanDocuments.Select((doc, index) => 
-            $"{index + 1}. <strong>{doc.NombreEmpresa}</strong> (NIT: {doc.Nit})"));
+    private string GetConsolidatedOrphanEmailBody(List<GeneratedPdfInfo> orphanDocuments)    {        // ✅ CORRECCIÓN MEJORADA: Usar lista HTML <ul><li> para garantizar formato vertical
+        var companiesListItems = string.Join("", orphanDocuments.Select((doc, index) => 
+            $"<li><strong>{doc.NombreEmpresa}</strong> (NIT: {doc.Nit})</li>"));
 
         return @"<div style='font-family: Arial, sans-serif; line-height: 1.6; text-align: justify;'>
 <p><strong>DOCUMENTOS SIN CORREO ELECTRÓNICO DESTINATARIO</strong></p>
 
 <p>Se adjuntan los documentos de estado de cartera para las siguientes empresas que no tienen correo electrónico registrado:</p>
 
-<p>" + companiesList + @"</p>
+<ol style='padding-left: 20px; margin: 10px 0;'>" + companiesListItems + @"</ol>
 
 <p><em>Total de documentos adjuntos: " + orphanDocuments.Count + @"</em></p>
 
