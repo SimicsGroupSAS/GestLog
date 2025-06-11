@@ -20,9 +20,7 @@ namespace GestLog.Views.Tools.GestionCartera
             var serviceProvider = LoggingService.GetServiceProvider();
             var viewModel = serviceProvider.GetRequiredService<DocumentGenerationViewModel>();
             DataContext = viewModel;
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Evento para manejar el cambio de contraseña en el PasswordBox
         /// </summary>
         private void SmtpPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
@@ -30,6 +28,32 @@ namespace GestLog.Views.Tools.GestionCartera
             if (sender is PasswordBox passwordBox && DataContext is DocumentGenerationViewModel viewModel)
             {
                 viewModel.SmtpPassword = passwordBox.Password;
+            }
+        }        /// <summary>
+        /// Manejador para cambiar a la pestaña de envío de correos
+        /// </summary>
+        private void GoToEmailTab_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Cambiar a la segunda pestaña (índice 1) que es "🚀 Envío Automático"
+                mainTabControl.SelectedIndex = 1;
+                
+                // Ejecutar el comando del ViewModel para logging y limpieza
+                if (DataContext is DocumentGenerationViewModel viewModel)
+                {
+                    viewModel.GoToEmailTabCommand.Execute(null);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                var logger = LoggingService.GetServiceProvider().GetRequiredService<IGestLogLogger>();
+                logger.LogError(ex, "Error al navegar a la pestaña de envío de correos");
+                
+                System.Windows.MessageBox.Show($"Error al navegar a la pestaña de envío: {ex.Message}", 
+                           "Error", 
+                           System.Windows.MessageBoxButton.OK, 
+                           System.Windows.MessageBoxImage.Error);
             }
         }
 

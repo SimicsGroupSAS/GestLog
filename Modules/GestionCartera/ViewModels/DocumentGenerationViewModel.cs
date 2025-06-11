@@ -117,14 +117,16 @@ public partial class DocumentGenerationViewModel : ObservableObject
     { 
         get => _mainViewModel.GlobalStatusMessage; 
         set => _mainViewModel.GlobalStatusMessage = value; 
-    }
-
-    public bool IsProcessing => _mainViewModel.PdfGeneration.IsProcessing;
+    }    public bool IsProcessing => _mainViewModel.PdfGeneration.IsProcessing;
     public bool IsProcessingCompleted => _mainViewModel.PdfGeneration.IsProcessingCompleted;
     public double ProgressValue => _mainViewModel.PdfGeneration.ProgressValue;
     public int TotalDocuments => _mainViewModel.DocumentManagement.TotalDocuments;
     public int CurrentDocument => _mainViewModel.PdfGeneration.CurrentDocument;
     public IReadOnlyList<GeneratedPdfInfo> GeneratedDocuments => _mainViewModel.DocumentManagement.GeneratedDocuments;
+
+    // Propiedades del panel de finalización
+    public bool ShowCompletionPanel => _mainViewModel.PdfGeneration.ShowCompletionPanel;
+    public string CompletionMessage => _mainViewModel.PdfGeneration.CompletionMessage;
 
     // Propiedades de configuración SMTP
     public string SmtpServer 
@@ -252,7 +254,8 @@ public partial class DocumentGenerationViewModel : ObservableObject
     // Comandos de generación de PDF
     [RelayCommand(CanExecute = nameof(IsProcessing))]
     private void CancelGeneration() => _mainViewModel.PdfGeneration.CancelGenerationCommand.Execute(null);    [RelayCommand]
-    private void ResetProgress() => _mainViewModel.PdfGeneration.ResetProgressCommandCommand.Execute(null);
+    private void ResetProgress() => _mainViewModel.PdfGeneration.ResetStateCommand.Execute(null);    [RelayCommand]
+    private void GoToEmailTab() => _mainViewModel.PdfGeneration.GoToEmailTabCommand.Execute(null);
 
     // Comandos de email automático
     [RelayCommand]

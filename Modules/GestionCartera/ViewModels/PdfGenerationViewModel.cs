@@ -42,12 +42,14 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TemplateStatusMessage))]
-    private bool _useDefaultTemplate = true;
-
-    [ObservableProperty] private IReadOnlyList<GeneratedPdfInfo> _generatedDocuments = new List<GeneratedPdfInfo>();
+    private bool _useDefaultTemplate = true;    [ObservableProperty] private IReadOnlyList<GeneratedPdfInfo> _generatedDocuments = new List<GeneratedPdfInfo>();
     [ObservableProperty] private string _logText = string.Empty;
+    
+    // Propiedades para el panel de finalización
+    [ObservableProperty] private bool _showCompletionPanel = false;
+    [ObservableProperty] private string _completionMessage = string.Empty;
 
-    public string TemplateStatusMessage => GetTemplateStatusMessage();    public PdfGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
+    public string TemplateStatusMessage => GetTemplateStatusMessage();public PdfGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
         : base(logger)
     {
         _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
@@ -251,6 +253,14 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 
                 // Guardar lista de documentos generados
                 await SaveGeneratedDocumentsList();
+                
+                // Mostrar panel de finalización con mensaje personalizado
+                CompletionMessage = $"🎉 ¡Generación completada exitosamente!\n\n" +
+                                   $"📊 Documentos generados: {TotalDocuments}\n" +
+                                   $"📁 Ubicación: {OutputFolderPath}\n\n" +
+                                   $"💡 Siguiente paso: Configure el envío automático de correos para entregar " +
+                                   $"los documentos directamente a sus clientes.";
+                ShowCompletionPanel = true;
             }
             else
             {
@@ -312,7 +322,7 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             StatusMessage = "Error al cancelar";
         }
     }    [RelayCommand]
-    private void ResetProgressCommand()
+    public void ResetState()
     {
         try
         {
@@ -324,11 +334,33 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogError(ex, "Error al reiniciar progreso");
             StatusMessage = "Error al reiniciar";
         }
+    }
+      [RelayCommand]
+    public void GoToEmailTab()
+    {
+        try
+        {
+            _logger.LogInformation("🚀 Usuario navegó a la pestaña de envío de correos");
+            
+            // Buscar el TabControl en la vista y cambiar a la segunda pestaña (Envío Automático)
+            // Este método será llamado desde el XAML y necesita interactuar con la vista
+            ShowCompletionPanel = false; // Ocultar el panel de finalización
+            
+            // Crear mensaje para el log del sistema
+            LogText += "\n📧 Navegando a la pestaña de Envío Automático...";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al navegar a la pestaña de email");
+        }
     }    protected override void ResetProgress()
     {
         base.ResetProgress();
         // Resetear el progreso suavizado también
         _smoothProgress.SetValueDirectly(0);
+        // Ocultar panel de finalización
+        ShowCompletionPanel = false;
+        CompletionMessage = string.Empty;
     }
 
     public bool CanGenerateDocuments()
