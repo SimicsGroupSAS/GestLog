@@ -346,9 +346,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
             LogText += $"\n❌ Error validando archivo de correos: {ex.Message}";
             HasEmailExcel = false;
         }
-    }
-
-    private async Task ConfigureSmtpFromConfigAsync(SmtpConfigurationViewModel config)
+    }    private async Task ConfigureSmtpFromConfigAsync(SmtpConfigurationViewModel config)
     {
         if (_emailService == null) return;
 
@@ -358,7 +356,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
             Port = config.SmtpPort,
             Username = config.SmtpUsername,
             Password = config.SmtpPassword,
-            EnableSsl = config.EnableSsl
+            EnableSsl = config.EnableSsl,
+            BccEmail = config.BccEmail,
+            CcEmail = config.CcEmail
         };
 
         await _emailService.ConfigureSmtpAsync(smtpConfig);

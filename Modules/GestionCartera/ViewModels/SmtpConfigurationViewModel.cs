@@ -20,9 +20,7 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
     private readonly IEmailService? _emailService;
     private readonly IConfigurationService _configurationService;
     private readonly ICredentialService _credentialService;
-    private readonly IGestLogLogger _logger;
-
-    // Propiedades SMTP
+    private readonly IGestLogLogger _logger;    // Propiedades SMTP
     [ObservableProperty] private string _smtpServer = string.Empty;
     [ObservableProperty] private int _smtpPort = 587;
     [ObservableProperty] private string _smtpUsername = string.Empty;
@@ -30,6 +28,10 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _enableSsl = true;
     [ObservableProperty] private bool _isEmailConfigured = false;
     [ObservableProperty] private bool _isConfiguring = false;
+    
+    // Propiedades BCC y CC
+    [ObservableProperty] private string _bccEmail = string.Empty;
+    [ObservableProperty] private string _ccEmail = string.Empty;
     
     // Propiedades adicionales para compatibilidad
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -55,9 +57,7 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanConfigureSmtp))]
     private async Task ConfigureSmtpAsync(CancellationToken cancellationToken = default)
     {
-        if (_emailService == null) return;
-
-        try
+        if (_emailService == null) return;        try
         {
             IsConfiguring = true;
             _logger.LogInformation("🔧 Configurando servidor SMTP...");
@@ -68,7 +68,9 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
                 Port = SmtpPort,
                 Username = SmtpUsername,
                 Password = SmtpPassword,
-                EnableSsl = EnableSsl
+                EnableSsl = EnableSsl,
+                BccEmail = BccEmail,
+                CcEmail = CcEmail
             };
 
             await _emailService.ConfigureSmtpAsync(smtpConfig, cancellationToken);
@@ -89,9 +91,7 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         {
             IsConfiguring = false;
         }
-    }
-
-    [RelayCommand]
+    }    [RelayCommand]
     private void ClearConfiguration()
     {
         SmtpServer = string.Empty;
@@ -100,6 +100,8 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         SmtpPassword = string.Empty;
         EnableSsl = true;
         IsEmailConfigured = false;
+        BccEmail = string.Empty;
+        CcEmail = string.Empty;
         StatusMessage = "Configuración de email limpiada";
         _logger.LogInformation("🧹 Configuración de email limpiada");
     }
@@ -130,14 +132,15 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         {
             IsConfiguring = true;
             StatusMessage = "Probando conexión SMTP...";
-            
-            var smtpConfig = new SmtpConfiguration
+              var smtpConfig = new SmtpConfiguration
             {
                 SmtpServer = SmtpServer,
                 Port = SmtpPort,
                 Username = SmtpUsername,
                 Password = SmtpPassword,
-                EnableSsl = EnableSsl
+                EnableSsl = EnableSsl,
+                BccEmail = BccEmail,
+                CcEmail = CcEmail
             };
 
             await _emailService.ConfigureSmtpAsync(smtpConfig);
@@ -185,12 +188,13 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             _logger.LogInformation("🔄 Cargando configuración SMTP...");
             
             var smtpConfig = _configurationService.Current.Smtp;
-            
-            SmtpServer = smtpConfig.Server ?? string.Empty;
+              SmtpServer = smtpConfig.Server ?? string.Empty;
             SmtpPort = smtpConfig.Port;
             SmtpUsername = smtpConfig.Username ?? string.Empty;
             EnableSsl = smtpConfig.UseSSL;
             IsEmailConfigured = smtpConfig.IsConfigured;
+            BccEmail = smtpConfig.BccEmail ?? string.Empty;
+            CcEmail = smtpConfig.CcEmail ?? string.Empty;
 
             // Cargar contraseña desde Windows Credential Manager
             if (!string.IsNullOrWhiteSpace(smtpConfig.Username))
@@ -225,8 +229,7 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         try
         {
             var smtpConfig = _configurationService.Current.Smtp;
-            
-            // Actualizar configuración (sin contraseña)
+              // Actualizar configuración (sin contraseña)
             smtpConfig.Server = SmtpServer;
             smtpConfig.Port = SmtpPort;
             smtpConfig.Username = SmtpUsername;
@@ -234,10 +237,8 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             smtpConfig.FromName = SmtpUsername;
             smtpConfig.UseSSL = EnableSsl;
             smtpConfig.UseAuthentication = !string.IsNullOrWhiteSpace(SmtpUsername);
-            
-            // ✅ CORRECCIÓN: Mantener campos BCC y CC existentes si ya están configurados
-            // Solo actualizamos si no están ya configurados para no sobrescribir valores existentes
-            // Los campos BCC y CC se configuran desde la ventana de configuración avanzada
+            smtpConfig.BccEmail = BccEmail;
+            smtpConfig.CcEmail = CcEmail;
 
             // Guardar contraseña de forma segura
             if (!string.IsNullOrWhiteSpace(SmtpUsername) && !string.IsNullOrWhiteSpace(SmtpPassword))
