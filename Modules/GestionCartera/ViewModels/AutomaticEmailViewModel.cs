@@ -338,9 +338,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
             LogText += $"\n❌ Error validando archivo de correos: {ex.Message}";
             HasEmailExcel = false;
         }
-    }
-
-    private async Task ConfigureSmtpFromConfigAsync(SmtpConfigurationViewModel config)
+    }    private async Task ConfigureSmtpFromConfigAsync(SmtpConfigurationViewModel config)
     {
         if (_emailService == null) return;
 
@@ -350,17 +348,22 @@ public partial class AutomaticEmailViewModel : ObservableObject
             Port = config.SmtpPort,
             Username = config.SmtpUsername,
             Password = config.SmtpPassword,
-            EnableSsl = config.EnableSsl
+            EnableSsl = config.EnableSsl,
+            BccEmail = config.BccEmail,     // ✅ CORRECCIÓN: Agregar BCC
+            CcEmail = config.CcEmail        // ✅ CORRECCIÓN: Agregar CC
         };
 
-        await _emailService.ConfigureSmtpAsync(smtpConfig);
-    }
+        _logger.LogInformation("🔧 Configurando EmailService con BCC: '{BccEmail}', CC: '{CcEmail}'", 
+            smtpConfig.BccEmail, smtpConfig.CcEmail);
 
-    private async Task<bool> ProcessAutomaticEmailSendingAsync(
+        await _emailService.ConfigureSmtpAsync(smtpConfig);
+    }private async Task<bool> ProcessAutomaticEmailSendingAsync(
         IReadOnlyList<GeneratedPdfInfo> documents, 
         CancellationToken cancellationToken)
     {
-        if (_emailService == null || _excelEmailService == null) return false;        var emailsSent = 0;
+        if (_emailService == null || _excelEmailService == null) return false;
+
+        var emailsSent = 0;
         var emailsFailed = 0;
         var orphansSent = 0;
         var totalEmails = documents.Count;
@@ -369,6 +372,10 @@ public partial class AutomaticEmailViewModel : ObservableObject
         var smtpConfig = _emailService.CurrentConfiguration;
         var bccEmail = smtpConfig?.BccEmail;
 
+        // Lista para almacenar documentos huérfanos para envío consolidado
+        var orphanDocuments = new List<GeneratedPdfInfo>();
+
+        // Procesar documentos con destinatarios específicos
         foreach (var document in documents)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -381,39 +388,18 @@ public partial class AutomaticEmailViewModel : ObservableObject
                     SelectedEmailExcelFilePath, 
                     document.NombreEmpresa, 
                     document.Nit, 
-                    cancellationToken);                if (!emails.Any())
-                {
-                    // Documento huérfano - enviar al BCC configurado si existe
-                    if (!string.IsNullOrWhiteSpace(bccEmail))
-                    {                        LogText += $" 📧 Sin Correo → BCC";
-                          var orphanEmailInfo = new EmailInfo
-                        {
-                            Recipients = new List<string> { bccEmail }, // Enviar al BCC como destinatario principal
-                            Subject = $"Estado de Cartera - Sin Correo Destinatario - {document.NombreEmpresa}",
-                            Body = GetOrphanEmailBodyWithSignature(document.NombreEmpresa, document.Nit),
-                            IsBodyHtml = true
-                        };
+                    cancellationToken);
 
-                        var orphanResult = await _emailService.SendEmailWithAttachmentAsync(orphanEmailInfo, document.RutaArchivo, cancellationToken);
-                        
-                        if (orphanResult.IsSuccess)
-                        {
-                            orphansSent++;
-                            LogText += $" ✅ Enviado al BCC";
-                        }
-                        else
-                        {
-                            emailsFailed++;
-                            LogText += $" ❌ Error BCC: {orphanResult.Message}";
-                        }
-                    }
-                    else
-                    {
-                        LogText += $" ⚠️ Sin email y sin BCC configurado";
-                        emailsFailed++;
-                    }
+                if (!emails.Any())
+                {
+                    // Documento huérfano - agregar a la lista para envío consolidado
+                    orphanDocuments.Add(document);
+                    LogText += $" 📋 Sin correo → consolidar en BCC";
                     continue;
-                }                var emailInfo = new EmailInfo
+                }
+
+                // Enviar documento con destinatario específico
+                var emailInfo = new EmailInfo
                 {
                     Recipients = emails.ToList(),
                     Subject = "Estado Cartera - SIMICS GROUP S.A.S",
@@ -439,10 +425,58 @@ public partial class AutomaticEmailViewModel : ObservableObject
                 emailsFailed++;
                 LogText += $" ❌ Error: {ex.Message}";
             }
-        }        LogText += $"\n📊 Resumen final: {emailsSent}/{totalEmails} emails enviados exitosamente";
+        }
+
+        // Enviar documentos huérfanos consolidados al BCC
+        if (orphanDocuments.Any() && !string.IsNullOrWhiteSpace(bccEmail))
+        {
+            try
+            {
+                LogText += $"\n📤 Enviando {orphanDocuments.Count} documento(s) huérfano(s) consolidados al BCC...";
+
+                // Crear lista de rutas de archivos
+                var orphanAttachments = orphanDocuments.Select(d => d.RutaArchivo).ToList();
+
+                // Generar cuerpo del email consolidado
+                var consolidatedBody = GetConsolidatedOrphanEmailBody(orphanDocuments);
+
+                var orphanEmailInfo = new EmailInfo
+                {
+                    Recipients = new List<string> { bccEmail },
+                    Subject = $"Estado de Cartera - Documentos Sin Destinatario ({orphanDocuments.Count} empresas)",
+                    Body = consolidatedBody,
+                    IsBodyHtml = true
+                };
+
+                var orphanResult = await _emailService.SendEmailWithAttachmentsAsync(orphanEmailInfo, orphanAttachments, cancellationToken);
+                
+                if (orphanResult.IsSuccess)
+                {
+                    orphansSent = orphanDocuments.Count;
+                    LogText += $" ✅ {orphanDocuments.Count} documento(s) enviado(s) consolidados al BCC";
+                }
+                else
+                {
+                    emailsFailed += orphanDocuments.Count;
+                    LogText += $" ❌ Error enviando consolidado al BCC: {orphanResult.Message}";
+                }
+            }
+            catch (Exception ex)
+            {
+                emailsFailed += orphanDocuments.Count;
+                LogText += $" ❌ Error enviando consolidado al BCC: {ex.Message}";
+            }
+        }
+        else if (orphanDocuments.Any())
+        {
+            LogText += $"\n⚠️ {orphanDocuments.Count} documento(s) sin correo y sin BCC configurado";
+            emailsFailed += orphanDocuments.Count;
+        }
+
+        LogText += $"\n📊 Resumen final: {emailsSent}/{totalEmails} emails enviados exitosamente";
         if (orphansSent > 0)
         {
-            LogText += $", {orphansSent} sin correo al BCC";
+            LogText += $", {orphansSent} documento(s) huérfano(s) enviado(s) consolidados al BCC";
         }
         if (emailsFailed > 0)
         {
@@ -673,6 +707,184 @@ public partial class AutomaticEmailViewModel : ObservableObject
 
 <p>Empresa: <strong>" + empresaName + @"</strong><br/>
 NIT: " + nit + @"</p>
+
+<p>Cordialmente,</p>
+
+<table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+  <tbody>
+    <tr>
+      <td>
+        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;width:385px'>
+          <tbody>
+            <tr>
+              <td width='80' style='vertical-align:middle'>
+                <span style='margin-right:20px;display:block'>
+                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/Logo-v6_Icono2021Firma.png' role='presentation' width='80' style='max-width:80px'>
+                </span>
+              </td>
+              <td style='vertical-align:middle'>
+                <h3 style='margin:0;font-size:14px;color:#000'>
+                  <span>JUAN MANUEL</span> <span>CUERVO PINILLA</span>
+                </h3>
+                <p style='margin:0;font-weight:500;color:#000;font-size:12px;line-height:15px'>
+                  <span>Gerente Financiero</span>
+                </p>
+                <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                  <tbody>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image002.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <a href='tel:+34654623277' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>+34-654623277</span>
+                        </a> |
+                        <a href='tel:+573163114545' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>+57-3163114545</span>
+                        </a>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image003.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <a href='mailto:juan.cuervo@simicsgroup.com' style='text-decoration:none;color:#000;font-size:11px'>
+                          <span>juan.cuervo@simicsgroup.com</span>
+                        </a>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'>
+                        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial'>
+                          <tbody>
+                            <tr>
+                              <td style='vertical-align:bottom'>
+                                <span style='display:block'>
+                                  <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image004.png' width='11' style='display:block'>
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style='padding:0;color:#000'>
+                        <span style='font-size:11px;color:#000'>
+                          <span>CR 53 No. 96-24 Oficina 3D</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr height='15' style='vertical-align:middle'>
+                      <td width='30' style='vertical-align:middle'></td>
+                      <td style='padding:0;color:#000'>
+                        <span style='font-size:11px;color:#000'>
+                          <span>Barranquilla, Colombia</span>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;width:385px'>
+          <tbody>
+            <tr height='60' style='vertical-align:middle'>
+              <th style='width:100%'>
+                <img src='http://simicsgroup.com/wp-content/uploads/2023/08/Logo-v6_2021-1Firma.png' width='200' style='max-width:200px;display:inline-block'>
+              </th>
+            </tr>
+            <tr height='25' style='text-align:center'>
+              <td style='width:100%'>
+                <a href='https://www.simicsgroup.com/' style='text-decoration:none;color:#000;font-size:11px;text-align:center'>
+                  <span>www.simicsgroup.com</span>
+                </a>
+              </td>
+            </tr>
+            <tr height='25' style='text-align:center'>
+              <td style='text-align:center;vertical-align:top'>
+                <table cellpadding='0' cellspacing='0' style='vertical-align:-webkit-baseline-middle;font-size:small;font-family:Arial;display:inline-block'>
+                  <tbody>
+                    <tr style='text-align:right'>
+                      <td>
+                        <a href='https://www.linkedin.com/company/simicsgroupsas' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image006.png' alt='linkedin' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                      <td>
+                        <a href='https://www.instagram.com/simicsgroupsas/' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image007.png' alt='instagram' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                      <td>
+                        <a href='https://www.facebook.com/SIMICSGroupSAS/' style='display:inline-block;padding:0'>
+                          <img src='http://simicsgroup.com/wp-content/uploads/2023/08/image008.png' alt='facebook' height='24' style='max-width:135px;display:block'>
+                        </a>
+                      </td>
+                      <td width='5'>
+                        <div></div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>";
+    }    /// <summary>
+    /// Genera el cuerpo de email consolidado para múltiples documentos sin destinatario
+    /// </summary>
+    private string GetConsolidatedOrphanEmailBody(List<GeneratedPdfInfo> orphanDocuments)
+    {
+        var companiesList = string.Join("\n", orphanDocuments.Select((doc, index) => 
+            $"{index + 1}. <strong>{doc.NombreEmpresa}</strong> (NIT: {doc.Nit})"));
+
+        return @"<div style='font-family: Arial, sans-serif; line-height: 1.6; text-align: justify;'>
+<p><strong>DOCUMENTOS SIN CORREO ELECTRÓNICO DESTINATARIO</strong></p>
+
+<p>Se adjuntan los documentos de estado de cartera para las siguientes empresas que no tienen correo electrónico registrado:</p>
+
+<p>" + companiesList + @"</p>
+
+<p><em>Total de documentos adjuntos: " + orphanDocuments.Count + @"</em></p>
+
+<p>Por favor, procedan con el envío manual o actualización de los datos de contacto correspondientes.</p>
 
 <p>Cordialmente,</p>
 

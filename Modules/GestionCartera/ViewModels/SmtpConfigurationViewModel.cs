@@ -188,12 +188,17 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             _logger.LogInformation("🔄 Cargando configuración SMTP...");
             
             var smtpConfig = _configurationService.Current.Smtp;
-            
-            SmtpServer = smtpConfig.Server ?? string.Empty;
+              SmtpServer = smtpConfig.Server ?? string.Empty;
             SmtpPort = smtpConfig.Port;
             SmtpUsername = smtpConfig.Username ?? string.Empty;
             EnableSsl = smtpConfig.UseSSL;
             IsEmailConfigured = smtpConfig.IsConfigured;
+              // ✅ CORRECCIÓN CRÍTICA: Cargar campos BCC y CC desde la configuración
+            BccEmail = smtpConfig.BccEmail ?? string.Empty;
+            CcEmail = smtpConfig.CcEmail ?? string.Empty;
+            
+            _logger.LogInformation("🔄 ✅ SMTP configurado: Server='{Server}', Username='{Username}', BCC='{BccEmail}', CC='{CcEmail}', IsConfigured={IsConfigured}", 
+                SmtpServer, SmtpUsername, BccEmail, CcEmail, IsEmailConfigured);
 
             // Cargar contraseña desde Windows Credential Manager
             if (!string.IsNullOrWhiteSpace(smtpConfig.Username))
