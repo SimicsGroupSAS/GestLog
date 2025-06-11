@@ -253,6 +253,67 @@ public partial class MyViewModel : ObservableObject
 
 ## 🔧 Integración con Servicios Existentes
 
+### Problema de Animación Entrecortada - Caso de Estudio
+
+#### 🚨 **Síntoma Original:**
+- **DaaterProcessor**: Progreso suave y fluido ✅
+- **GestionCartera**: Progreso con "brincos" y saltos ❌
+
+#### 🔍 **Análisis de Causa Raíz:**
+
+**DaaterProcessor (Animación Suave):**
+```csharp
+// ✅ Implementación correcta con SmoothProgressService
+private SmoothProgressService _smoothProgress;
+
+// En constructor
+_smoothProgress = new SmoothProgressService(value => UpdateProgress(value));
+
+// En reporte de progreso
+var progress = new Progress<double>(p => 
+{
+    _smoothProgress.Report(p); // ← Animación suave
+    StatusMessage = $"Procesando... {p:F1}%";
+});
+```
+
+**GestionCartera (Animación Entrecortada - ANTES):**
+```csharp
+// ❌ Implementación directa sin suavizado
+private void OnProgressUpdated((int current, int total, string status) progress)
+{
+    // Actualización directa = saltos abruptos
+    ProgressValue = progress.total > 0 ? (double)progress.current / progress.total * 100 : 0;
+    //            ↑
+    //       25% → 50% → 75% (saltos discretos)
+}
+```
+
+#### ✅ **Solución Implementada:**
+
+**GestionCartera (Animación Suave - DESPUÉS):**
+```csharp
+// ✅ Implementación corregida con SmoothProgressService
+private SmoothProgressService _smoothProgress;
+
+// En constructor
+_smoothProgress = new SmoothProgressService(value => ProgressValue = value);
+
+// En método OnProgressUpdated
+private void OnProgressUpdated((int current, int total, string status) progress)
+{
+    var progressPercentage = progress.total > 0 ? (double)progress.current / progress.total * 100 : 0;
+    _smoothProgress.Report(progressPercentage); // ← Ahora con animación suave
+    //                ↑
+    //     25% → 26% → 27% → ... → 50% (transición fluida)
+}
+```
+
+#### 🎯 **Resultado:**
+- **Ambos módulos** ahora tienen animación **consistente y profesional**
+- **Experiencia de usuario unificada** en toda la aplicación
+- **SimpleProgressBar** funciona **perfectamente** con `SmoothProgressService`
+
 ### Con SmoothProgressService
 ```csharp
 // En el ViewModel
