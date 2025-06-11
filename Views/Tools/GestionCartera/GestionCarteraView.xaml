@@ -143,11 +143,10 @@
                                   <ProgressBar Value="{Binding ProgressValue, Mode=OneWay}" 
                                            Height="20" Background="#BDC3C7" 
                                            Foreground="#27AE60" BorderThickness="0"/>
-                                
-                                <DockPanel Margin="0,5,0,0">
-                                    <TextBlock Text="{Binding CurrentDocument, StringFormat='Procesando: {0}'}" 
+                                  <DockPanel Margin="0,5,0,0">
+                                    <TextBlock Text="{Binding CurrentDocument, StringFormat='Procesando: {0}', Mode=OneWay}" 
                                               Foreground="#7F8C8D" DockPanel.Dock="Left"/>
-                                    <TextBlock Text="{Binding TotalDocuments, StringFormat='de {0} empresas'}" 
+                                    <TextBlock Text="{Binding TotalDocuments, StringFormat='de {0} empresas', Mode=OneWay}" 
                                               Foreground="#7F8C8D" HorizontalAlignment="Right"/>
                                 </DockPanel>
                             </StackPanel>
@@ -187,16 +186,15 @@
                                                        BarForeground="#27AE60"
                                                        BarBackground="#34495E"
                                                        BarHeight="20"/>
-                            
-                            <!-- Información adicional -->
+                              <!-- Información adicional -->
                             <TextBlock Grid.Row="2"
                                       HorizontalAlignment="Center"
                                       Foreground="#BDC3C7"
                                       FontSize="12">
                                 <Run Text="Documento "/>
-                                <Run Text="{Binding CurrentDocument}" FontWeight="SemiBold" Foreground="#F39C12"/>
+                                <Run Text="{Binding CurrentDocument, Mode=OneWay}" FontWeight="SemiBold" Foreground="#F39C12"/>
                                 <Run Text=" de "/>
-                                <Run Text="{Binding TotalDocuments}" FontWeight="SemiBold" Foreground="#F39C12"/>
+                                <Run Text="{Binding TotalDocuments, Mode=OneWay}" FontWeight="SemiBold" Foreground="#F39C12"/>
                             </TextBlock>
                             
                             <!-- Botón de cancelar dentro del panel -->
