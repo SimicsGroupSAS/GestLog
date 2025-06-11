@@ -39,13 +39,13 @@ public partial class DocumentGenerationViewModel : ObservableObject
               // Suscribirse a eventos de cambio de propiedad de los sub-ViewModels
             _mainViewModel.PdfGeneration.PropertyChanged += (s, e) => 
             {
-                OnPropertyChanged(e.PropertyName);
-                // Notificar cambios en comandos cuando cambien propiedades relevantes
+                OnPropertyChanged(e.PropertyName);                // Notificar cambios en comandos cuando cambien propiedades relevantes
                 if (e.PropertyName == nameof(_mainViewModel.PdfGeneration.SelectedExcelFilePath) ||
                     e.PropertyName == nameof(_mainViewModel.PdfGeneration.OutputFolderPath) ||
                     e.PropertyName == nameof(_mainViewModel.PdfGeneration.IsProcessing))
                 {
                     GenerateDocumentsCommand.NotifyCanExecuteChanged();
+                    CancelGenerationCommand.NotifyCanExecuteChanged();
                 }
             };
             _mainViewModel.DocumentManagement.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
@@ -247,7 +247,14 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private async Task ConfigureSmtp() => await _mainViewModel.SmtpConfiguration.ConfigureSmtpCommand.ExecuteAsync(null);
 
     [RelayCommand]
-    private async Task TestSmtpConnection() => await _mainViewModel.SmtpConfiguration.TestSmtpConnectionCommand.ExecuteAsync(null);    // Comandos de email automático
+    private async Task TestSmtpConnection() => await _mainViewModel.SmtpConfiguration.TestSmtpConnectionCommand.ExecuteAsync(null);
+
+    // Comandos de generación de PDF
+    [RelayCommand(CanExecute = nameof(IsProcessing))]
+    private void CancelGeneration() => _mainViewModel.PdfGeneration.CancelGenerationCommand.Execute(null);    [RelayCommand]
+    private void ResetProgress() => _mainViewModel.PdfGeneration.ResetProgressCommandCommand.Execute(null);
+
+    // Comandos de email automático
     [RelayCommand]
     private async Task SelectEmailExcelFile() 
     {

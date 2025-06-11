@@ -289,9 +289,7 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogError(ex, "❌ Error al abrir carpeta de salida");
             StatusMessage = "Error al abrir carpeta de salida";
         }
-    }
-
-    [RelayCommand(CanExecute = nameof(IsProcessing))]
+    }    [RelayCommand(CanExecute = nameof(IsProcessing))]
     private void CancelGeneration()
     {
         try
@@ -305,7 +303,28 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogError(ex, "Error al cancelar generación");
             StatusMessage = "Error al cancelar";
         }
-    }    public bool CanGenerateDocuments()
+    }    [RelayCommand]
+    private void ResetProgressCommand()
+    {
+        try
+        {
+            ResetProgress();
+            _logger.LogInformation("🔄 Progreso de generación reiniciado");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reiniciar progreso");
+            StatusMessage = "Error al reiniciar";
+        }
+    }
+
+    protected override void ResetProgress()
+    {
+        base.ResetProgress();
+        // Cualquier lógica adicional específica para PDF si es necesaria en el futuro
+    }
+
+    public bool CanGenerateDocuments()
     {
         bool isNotProcessing = !IsProcessing;
         bool hasExcelPath = !string.IsNullOrWhiteSpace(SelectedExcelFilePath);
