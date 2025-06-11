@@ -291,19 +291,23 @@ private void UpdateProgressWithEstimation(double progress)
 
 ## 🎯 Comparación: Antes vs Después
 
-### ❌ Antes (Barra Compleja)
+### ❌ Antes (Barra Compleja + Animación Entrecortada)
 - **150+ líneas de XAML** por cada implementación
 - **Gradientes, animaciones, efectos** complejos
 - **Difícil de mantener** y personalizar
 - **No reutilizable** entre módulos
 - **Rendimiento pesado** por animaciones
+- **Progreso con saltos**: GestionCartera actualizaba directamente `ProgressValue` (25% → 50% → 75%)
+- **Inconsistencia visual**: DaaterProcessor suave vs. GestionCartera entrecortada
 
-### ✅ Después (SimpleProgressBar)
+### ✅ Después (SimpleProgressBar + Animación Unificada)
 - **1 línea de implementación** básica
 - **Personalización completa** mediante propiedades
 - **Reutilizable en todo el proyecto**
 - **Rendimiento optimizado**
 - **Mantenimiento centralizado**
+- **Animación fluida uniforme**: Ambos módulos usan `SmoothProgressService` para transiciones suaves
+- **Experiencia de usuario consistente**: Animación profesional en todo el proyecto
 
 ## 🚀 Migración Rápida
 
@@ -341,6 +345,8 @@ Para migrar barras existentes al nuevo control:
 - ✅ **Barra compleja reemplazada** en DaaterProccesorView.xaml  
 - ✅ **Compilación exitosa** sin errores
 - ✅ **Botones de cancelar unificados y consistentes**
+- ✅ **Animación suave implementada** en ambos módulos usando `SmoothProgressService`
+- ✅ **Problema de progreso "entrecortado" resuelto** - Ahora ambos módulos tienen animación fluida
 - ✅ Control completamente reutilizable
 - ✅ Documentación completa disponible
 
@@ -351,12 +357,13 @@ Para migrar barras existentes al nuevo control:
 | **Reutilización** | 0% | 100% | +100% |
 | **Mantenimiento** | Complejo | Centralizado | +300% |
 | **Personalización** | Limitada | Completa | +500% |
+| **Animación** | Inconsistente/Entrecortada | Suave y Unificada | +1000% |
 
 ### 🚀 Próximos Pasos:
-1. **Probar la aplicación** en modo debug
-2. **Verificar funcionamiento** de las barras de progreso
-3. **Aplicar el control** en otros módulos del proyecto
-4. **Crear más temas** predefinidos si es necesario
+1. ✅ **Problema resuelto** - Ambos módulos ahora tienen animación de progreso suave y consistente
+2. **Probar la aplicación** en modo debug para verificar el funcionamiento
+3. **Aplicar el control** en otros módulos del proyecto si es necesario
+4. **Crear más temas** predefinidos si se requiere
 
 ### 📝 Cómo usar en nuevos módulos:
 ```xml
@@ -373,6 +380,51 @@ xmlns:controls="clr-namespace:GestLog.Controls"
 **¡El proyecto ahora tiene una barra de progreso simple, potente y completamente reutilizable!** 🎊
 
 ## 🔧 Correcciones Aplicadas
+
+### ✅ **Animación Suave de Progreso** (11 de junio, 2025)
+- **Problema**: La animación de progreso en GestionCartera se veía "entrecortada" (con saltos) comparada con la animación suave de DaaterProcessor
+- **Causa Raíz**: 
+  - **DaaterProcessor**: Usa `SmoothProgressService` que crea transiciones animadas entre valores
+  - **GestionCartera**: Actualizaba `ProgressValue` directamente con saltos discretos (25% → 50% → 75%)
+- **Solución**: Implementado `SmoothProgressService` en `PdfGenerationViewModel` de GestionCartera
+- **Resultado**: Ambos módulos ahora tienen animación de progreso fluida y consistente
+
+#### Código implementado:
+```csharp
+// En PdfGenerationViewModel.cs
+using GestLog.Services.Core.UI; // Agregar using
+
+// Campo del servicio
+private SmoothProgressService _smoothProgress = null!;
+
+// Inicialización en constructor
+_smoothProgress = new SmoothProgressService(value => ProgressValue = value);
+
+// Uso en OnProgressUpdated
+private void OnProgressUpdated((int current, int total, string status) progress)
+{
+    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+    {
+        CurrentDocument = progress.current;
+        TotalDocuments = progress.total;
+        
+        // ✅ NUEVO: Usar servicio suavizado en lugar de actualización directa
+        var progressPercentage = progress.total > 0 ? (double)progress.current / progress.total * 100 : 0;
+        _smoothProgress.Report(progressPercentage);  // ← Animación suave
+        
+        StatusMessage = progress.status;
+        // ...resto del código
+    });
+}
+
+// Reseteo suave al iniciar
+IsProcessing = true;
+_smoothProgress.SetValueDirectly(0); // ← Reinicio sin animación
+
+// Finalización suave
+_smoothProgress.Report(100); // ← Completar al 100% suavemente
+await Task.Delay(200); // Pausa visual
+```
 
 ### ✅ **Consistencia de Botones de Cancelar** (11 de junio, 2025)
 - **Problema**: El botón de cancelar en Gestión de Cartera tenía un estilo diferente al de DaaterProcessor

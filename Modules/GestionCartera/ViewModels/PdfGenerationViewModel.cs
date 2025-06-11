@@ -8,6 +8,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestLog.Services.Core.Logging;
+using GestLog.Services.Core.UI;
 using GestLog.Modules.GestionCartera.Services;
 using GestLog.Modules.GestionCartera.Models;
 using GestLog.Modules.GestionCartera.ViewModels.Base;
@@ -23,6 +24,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 {
     private readonly IPdfGeneratorService _pdfGenerator;
     private const string DEFAULT_TEMPLATE_FILE = "PlantillaSIMICS.png";
+
+    // Servicio de progreso suavizado para animación fluida
+    private SmoothProgressService _smoothProgress = null!; // Será inicializado en el constructor
 
     [ObservableProperty] 
     [NotifyCanExecuteChangedFor(nameof(GenerateDocumentsCommand))]
@@ -43,12 +47,13 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
     [ObservableProperty] private IReadOnlyList<GeneratedPdfInfo> _generatedDocuments = new List<GeneratedPdfInfo>();
     [ObservableProperty] private string _logText = string.Empty;
 
-    public string TemplateStatusMessage => GetTemplateStatusMessage();
-
-    public PdfGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
+    public string TemplateStatusMessage => GetTemplateStatusMessage();    public PdfGenerationViewModel(IPdfGeneratorService pdfGenerator, IGestLogLogger logger)
         : base(logger)
     {
         _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
+        
+        // Inicializar el servicio de progreso suavizado
+        _smoothProgress = new SmoothProgressService(value => ProgressValue = value);
         
         InitializeDefaultPaths();
     }
@@ -194,9 +199,7 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
         _logger.LogInformation("🗑️ Uso de plantilla desactivado");
         StatusMessage = "Plantilla desactivada - se usará fondo blanco";
         OnPropertyChanged(nameof(TemplateStatusMessage));
-    }
-
-    [RelayCommand(CanExecute = nameof(CanGenerateDocuments))]
+    }    [RelayCommand(CanExecute = nameof(CanGenerateDocuments))]
     private async Task GenerateDocuments()
     {
         if (IsProcessing) return;
@@ -205,7 +208,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
         {
             IsProcessing = true;
             IsProcessingCompleted = false;
-            ProgressValue = 0;
+            
+            // Resetear progreso usando el servicio suavizado
+            _smoothProgress.SetValueDirectly(0);
             CurrentDocument = 0;
             TotalDocuments = 0;
             GeneratedDocuments = new List<GeneratedPdfInfo>();
@@ -232,14 +237,17 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             {
                 StatusMessage = "Generación cancelada por el usuario";
                 _logger.LogWarning("⚠️ Generación de documentos cancelada por el usuario");
-            }
-            else if (result?.Count > 0)
+            }            else if (result?.Count > 0)
             {
                 GeneratedDocuments = result;
                 TotalDocuments = GeneratedDocuments.Count;
                 IsProcessingCompleted = true;
                 StatusMessage = $"✅ Generación completada: {TotalDocuments} documentos generados";
                 _logger.LogInformation("✅ Generación completada exitosamente: {Count} documentos", TotalDocuments);
+
+                // Completar el progreso suavemente al 100%
+                _smoothProgress.Report(100);
+                await Task.Delay(200); // Pequeña pausa para mostrar la finalización
 
                 // Guardar lista de documentos generados
                 await SaveGeneratedDocumentsList();
@@ -316,12 +324,11 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogError(ex, "Error al reiniciar progreso");
             StatusMessage = "Error al reiniciar";
         }
-    }
-
-    protected override void ResetProgress()
+    }    protected override void ResetProgress()
     {
         base.ResetProgress();
-        // Cualquier lógica adicional específica para PDF si es necesaria en el futuro
+        // Resetear el progreso suavizado también
+        _smoothProgress.SetValueDirectly(0);
     }
 
     public bool CanGenerateDocuments()
@@ -336,15 +343,17 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 
     private bool CanOpenOutputFolder() => 
         !string.IsNullOrWhiteSpace(OutputFolderPath) && 
-        Directory.Exists(OutputFolderPath);
-
-    private void OnProgressUpdated((int current, int total, string status) progress)
+        Directory.Exists(OutputFolderPath);    private void OnProgressUpdated((int current, int total, string status) progress)
     {
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
             CurrentDocument = progress.current;
             TotalDocuments = progress.total;
-            ProgressValue = progress.total > 0 ? (double)progress.current / progress.total * 100 : 0;
+            
+            // Calcular el progreso y usar el servicio suavizado para animación fluida
+            var progressPercentage = progress.total > 0 ? (double)progress.current / progress.total * 100 : 0;
+            _smoothProgress.Report(progressPercentage);
+            
             StatusMessage = progress.status;
             
             if (!string.IsNullOrEmpty(progress.status))

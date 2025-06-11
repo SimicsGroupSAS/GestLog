@@ -32,12 +32,10 @@
             <!-- Main Content -->
             <TabControl x:Name="mainTabControl" Background="White" BorderThickness="0">
                 <!-- Tab: Generación de Documentos -->
-                <TabItem Header="📄 Generación de Documentos" FontSize="14" Padding="15,8">                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
+                <TabItem Header="📄 Generación de Documentos" FontSize="14" Padding="15,8">                    <Grid Margin="20">                        <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="200"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
@@ -131,27 +129,8 @@
                                     </StackPanel>
                                 </Grid>
                             </Grid>
-                        </Border>                        <!-- Progress Panel -->
-                        <Border Grid.Row="1" Background="#ECF0F1" Padding="20" CornerRadius="5" Margin="0,80,0,20">
-                            <StackPanel>
-                                <DockPanel Margin="0,0,0,10">
-                                    <TextBlock Text="📊 Estado del Proceso:" FontWeight="SemiBold" 
-                                              Foreground="#2C3E50" DockPanel.Dock="Left"/>
-                                    <TextBlock Text="{Binding StatusMessage}" 
-                                              Foreground="#34495E" HorizontalAlignment="Right"/>
-                                </DockPanel>
-                                  <ProgressBar Value="{Binding ProgressValue, Mode=OneWay}" 
-                                           Height="20" Background="#BDC3C7" 
-                                           Foreground="#27AE60" BorderThickness="0"/>
-                                  <DockPanel Margin="0,5,0,0">
-                                    <TextBlock Text="{Binding CurrentDocument, StringFormat='Procesando: {0}', Mode=OneWay}" 
-                                              Foreground="#7F8C8D" DockPanel.Dock="Left"/>
-                                    <TextBlock Text="{Binding TotalDocuments, StringFormat='de {0} empresas', Mode=OneWay}" 
-                                              Foreground="#7F8C8D" HorizontalAlignment="Right"/>
-                                </DockPanel>
-                            </StackPanel>
                         </Border>                        <!-- Action Buttons -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
                             <Button Content="🚀 Generar Estados de Cuenta" 
                                    Background="#27AE60" Foreground="White"
                                    Padding="20,10" BorderThickness="0" FontWeight="SemiBold"
@@ -164,7 +143,7 @@
                                    Command="{Binding ResetProgressCommand}"
                                    ToolTip="Reiniciar progreso y estado"/>
                         </StackPanel>                        <!-- Simple Progress Panel -->
-                        <Grid Grid.Row="3" 
+                        <Grid Grid.Row="2" 
                              Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
