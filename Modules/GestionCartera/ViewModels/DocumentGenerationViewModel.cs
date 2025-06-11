@@ -48,8 +48,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
                     CancelGenerationCommand.NotifyCanExecuteChanged();
                 }
             };
-            _mainViewModel.DocumentManagement.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
-            _mainViewModel.AutomaticEmail.PropertyChanged += (s, e) => 
+            _mainViewModel.DocumentManagement.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);            _mainViewModel.AutomaticEmail.PropertyChanged += (s, e) => 
             {
                 OnPropertyChanged(e.PropertyName);
                 // Notificar cambios en CanSendAutomatically cuando cambien propiedades relevantes
@@ -58,6 +57,25 @@ public partial class DocumentGenerationViewModel : ObservableObject
                     e.PropertyName == nameof(_mainViewModel.AutomaticEmail.HasEmailExcel))
                 {
                     SendDocumentsAutomaticallyCommand.NotifyCanExecuteChanged();
+                    CancelEmailSendingCommand.NotifyCanExecuteChanged();
+                }
+                  // Notificar cambios específicos para propiedades de progreso de email
+                if (e.PropertyName == nameof(_mainViewModel.AutomaticEmail.ProgressValue))
+                {
+                    OnPropertyChanged(nameof(EmailProgressValue));
+                    CancelEmailSendingCommand.NotifyCanExecuteChanged();
+                }
+                else if (e.PropertyName == nameof(_mainViewModel.AutomaticEmail.CurrentEmail))
+                {
+                    OnPropertyChanged(nameof(CurrentEmail));
+                }
+                else if (e.PropertyName == nameof(_mainViewModel.AutomaticEmail.TotalEmails))
+                {
+                    OnPropertyChanged(nameof(TotalEmails));
+                }
+                else if (e.PropertyName == nameof(_mainViewModel.AutomaticEmail.StatusMessage))
+                {
+                    OnPropertyChanged(nameof(EmailStatusMessage));
                 }
             };
             _mainViewModel.SmtpConfiguration.PropertyChanged += (s, e) => 
@@ -177,11 +195,16 @@ public partial class DocumentGenerationViewModel : ObservableObject
         set => _mainViewModel.AutomaticEmail.SelectedEmailExcelFilePath = value; 
     }
 
-    public bool HasEmailExcel => _mainViewModel.AutomaticEmail.HasEmailExcel;
-    public int CompaniesWithEmail => _mainViewModel.AutomaticEmail.CompaniesWithEmail;
+    public bool HasEmailExcel => _mainViewModel.AutomaticEmail.HasEmailExcel;    public int CompaniesWithEmail => _mainViewModel.AutomaticEmail.CompaniesWithEmail;
     public int CompaniesWithoutEmail => _mainViewModel.AutomaticEmail.CompaniesWithoutEmail;
     public bool IsSendingEmail => _mainViewModel.AutomaticEmail.IsSendingEmail;
     public bool CanSendAutomatically => _mainViewModel.AutomaticEmail.CanSendAutomatically;
+
+    // Propiedades de progreso para envío de emails
+    public double EmailProgressValue => _mainViewModel.AutomaticEmail.ProgressValue;
+    public int CurrentEmail => _mainViewModel.AutomaticEmail.CurrentEmail;
+    public int TotalEmails => _mainViewModel.AutomaticEmail.TotalEmails;
+    public string EmailStatusMessage => _mainViewModel.AutomaticEmail.StatusMessage;
 
     public string EmailSubject 
     { 
@@ -267,6 +290,12 @@ public partial class DocumentGenerationViewModel : ObservableObject
     {
         await _mainViewModel.SendDocumentsAutomaticallyCommand.ExecuteAsync(null);
     }
+      // Comando para cancelar envío de emails
+    [RelayCommand(CanExecute = nameof(CanCancelEmailSending))]
+    private void CancelEmailSending() 
+    {
+        _mainViewModel.AutomaticEmail.CancelEmailSendingCommand.Execute(null);
+    }
 
     #endregion
 
@@ -276,13 +305,13 @@ public partial class DocumentGenerationViewModel : ObservableObject
 
     private bool CanOpenOutputFolder() => 
         !string.IsNullOrWhiteSpace(OutputFolderPath) && 
-        Directory.Exists(OutputFolderPath);
-
-    private bool CanConfigureSmtp() => 
+        Directory.Exists(OutputFolderPath);    private bool CanConfigureSmtp() => 
         !IsProcessing && 
         !IsSendingEmail && 
         !string.IsNullOrWhiteSpace(SmtpServer) && 
         !string.IsNullOrWhiteSpace(SmtpUsername);
+
+    private bool CanCancelEmailSending() => IsSendingEmail;
 
     #endregion
 

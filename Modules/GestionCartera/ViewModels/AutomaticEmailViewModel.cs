@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestLog.Services.Core.Logging;
+using GestLog.Services.Core.UI;
 using GestLog.Modules.GestionCartera.Services;
 using GestLog.Modules.GestionCartera.Models;
 
@@ -16,10 +17,13 @@ namespace GestLog.Modules.GestionCartera.ViewModels;
 /// ViewModel para funcionalidades de email automático
 /// </summary>
 public partial class AutomaticEmailViewModel : ObservableObject
-{
-    private readonly IEmailService? _emailService;
+{    private readonly IEmailService? _emailService;
     private readonly IExcelEmailService? _excelEmailService;
-    private readonly IGestLogLogger _logger;
+    private readonly IGestLogLogger _logger;    // Servicio de progreso suavizado para animación fluida
+    private SmoothProgressService _smoothProgress = null!; // Será inicializado en el constructor
+    
+    // Token de cancelación para operaciones de envío de email
+    private CancellationTokenSource? _emailCancellationTokenSource;
 
     [ObservableProperty] private string _selectedEmailExcelFilePath = string.Empty;
     [ObservableProperty] private bool _hasEmailExcel = false;
@@ -27,6 +31,11 @@ public partial class AutomaticEmailViewModel : ObservableObject
     [ObservableProperty] private int _companiesWithEmail = 0;
     [ObservableProperty] private int _companiesWithoutEmail = 0;
     [ObservableProperty] private string _logText = string.Empty;
+    
+    // Propiedades de progreso para la barra de envío
+    [ObservableProperty] private double _progressValue = 0;
+    [ObservableProperty] private int _currentEmail = 0;
+    [ObservableProperty] private int _totalEmails = 0;
     
     // Propiedades adicionales necesarias para el wrapper
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -39,9 +48,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
     [ObservableProperty] private bool _isEmailConfigured = false;
     [ObservableProperty] private IReadOnlyList<GeneratedPdfInfo> _generatedDocuments = new List<GeneratedPdfInfo>();
 
-    public bool CanSendAutomatically => CanSendDocumentsAutomatically();
-
-    public AutomaticEmailViewModel(
+    public bool CanSendAutomatically => CanSendDocumentsAutomatically();    public AutomaticEmailViewModel(
         IEmailService? emailService,
         IExcelEmailService? excelEmailService,
         IGestLogLogger logger)
@@ -49,6 +56,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
         _emailService = emailService;
         _excelEmailService = excelEmailService;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Inicializar el servicio de progreso suavizado
+        _smoothProgress = new SmoothProgressService(value => ProgressValue = value);
     }    [RelayCommand]
     public async Task SelectEmailExcelFileAsync()
     {
@@ -282,18 +292,29 @@ public partial class AutomaticEmailViewModel : ObservableObject
         {
             _logger.LogWarning("No hay archivo Excel seleccionado para mapear emails");
             return false;
-        }
-
-        try
+        }        try
         {
             IsSendingEmail = true;
+            
+            // Crear nuevo token de cancelación para esta operación
+            _emailCancellationTokenSource?.Cancel();
+            _emailCancellationTokenSource = new CancellationTokenSource();
+            
+            // Combinar el token externo con el interno
+            using var combinedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken, _emailCancellationTokenSource.Token);
+            
+            // Inicializar progreso
+            _smoothProgress.SetValueDirectly(0);
+            StatusMessage = "Iniciando envío automático de correos...";
+            CurrentEmail = 0;
+            TotalEmails = documents.Count;
+            
             LogText += "\n🚀 Iniciando envío automático de documentos...\n";
 
             // Configurar SMTP
-            await ConfigureSmtpFromConfigAsync(smtpConfig);
-
-            // Procesar envíos
-            var result = await ProcessAutomaticEmailSendingAsync(documents, cancellationToken);
+            await ConfigureSmtpFromConfigAsync(smtpConfig);            // Procesar envíos
+            var result = await ProcessAutomaticEmailSendingAsync(documents, combinedTokenSource.Token);
 
             LogText += result ? "\n✅ Envío automático completado" : "\n❌ Envío automático falló";
             return result;
@@ -303,10 +324,17 @@ public partial class AutomaticEmailViewModel : ObservableObject
             _logger.LogError(ex, "Error durante el envío automático");
             LogText += $"\n❌ Error durante envío automático: {ex.Message}";
             return false;
-        }
-        finally
+        }        finally
         {
             IsSendingEmail = false;
+            // Reset del progreso al finalizar
+            if (!IsSendingEmail)
+            {
+                _smoothProgress.SetValueDirectly(0);
+                StatusMessage = "Listo para envío automático";
+                CurrentEmail = 0;
+                TotalEmails = 0;
+            }
         }
     }
 
@@ -357,7 +385,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
             smtpConfig.BccEmail, smtpConfig.CcEmail);
 
         await _emailService.ConfigureSmtpAsync(smtpConfig);
-    }private async Task<bool> ProcessAutomaticEmailSendingAsync(
+    }    private async Task<bool> ProcessAutomaticEmailSendingAsync(
         IReadOnlyList<GeneratedPdfInfo> documents, 
         CancellationToken cancellationToken)
     {
@@ -368,6 +396,11 @@ public partial class AutomaticEmailViewModel : ObservableObject
         var orphansSent = 0;
         var totalEmails = documents.Count;
 
+        // Inicializar progreso
+        TotalEmails = totalEmails;
+        CurrentEmail = 0;
+        _smoothProgress.SetValueDirectly(0);
+
         // Obtener la configuración BCC para documentos huérfanos
         var smtpConfig = _emailService.CurrentConfiguration;
         var bccEmail = smtpConfig?.BccEmail;
@@ -376,12 +409,19 @@ public partial class AutomaticEmailViewModel : ObservableObject
         var orphanDocuments = new List<GeneratedPdfInfo>();
 
         // Procesar documentos con destinatarios específicos
-        foreach (var document in documents)
+        for (int i = 0; i < documents.Count; i++)
         {
+            var document = documents[i];
             cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
+                // Actualizar progreso
+                CurrentEmail = i + 1;
+                var progressPercentage = totalEmails > 0 ? (double)(i + 1) / totalEmails * 90 : 0; // Dejar 10% para consolidados
+                _smoothProgress.Report(progressPercentage);
+                StatusMessage = $"Enviando email {CurrentEmail}/{totalEmails}: {document.NombreEmpresa}";
+
                 LogText += $"\n  📄 Procesando: {document.NombreArchivo} ({document.NombreEmpresa})";
 
                 var emails = await _excelEmailService.GetEmailsForCompanyAsync(
@@ -432,6 +472,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
         {
             try
             {
+                StatusMessage = $"Enviando documentos consolidados al BCC...";
+                _smoothProgress.Report(95);
+                
                 LogText += $"\n📤 Enviando {orphanDocuments.Count} documento(s) huérfano(s) consolidados al BCC...";
 
                 // Crear lista de rutas de archivos
@@ -472,6 +515,11 @@ public partial class AutomaticEmailViewModel : ObservableObject
             LogText += $"\n⚠️ {orphanDocuments.Count} documento(s) sin correo y sin BCC configurado";
             emailsFailed += orphanDocuments.Count;
         }
+
+        // Completar progreso
+        _smoothProgress.Report(100);
+        StatusMessage = "Envío de correos completado";
+        await Task.Delay(200); // Pausa visual
 
         LogText += $"\n📊 Resumen final: {emailsSent}/{totalEmails} emails enviados exitosamente";
         if (orphansSent > 0)
@@ -1044,11 +1092,28 @@ NIT: " + nit + @"</p>
   </tbody>
 </table>
 </div>";
-    }
-
-    // Este comando será llamado desde el MainViewModel con el parámetro correcto
+    }    // Este comando será llamado desde el MainViewModel con el parámetro correcto
     public async Task<bool> SendDocumentsAutomaticallyWithConfig(SmtpConfigurationViewModel smtpConfig)
     {
         return await SendDocumentsAutomaticallyAsync(GeneratedDocuments, smtpConfig);
+    }    /// <summary>
+    /// Comando para cancelar el envío de emails
+    /// </summary>
+    [RelayCommand]
+    private void CancelEmailSending()
+    {
+        try
+        {
+            _logger.LogInformation("🛑 Cancelando envío de emails...");
+            
+            _emailCancellationTokenSource?.Cancel();
+            StatusMessage = "Cancelando envío de correos...";
+            LogText += "\n🛑 Cancelación solicitada por el usuario";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cancelar envío de emails");
+            LogText += $"\n❌ Error al cancelar: {ex.Message}";
+        }
     }
 }
