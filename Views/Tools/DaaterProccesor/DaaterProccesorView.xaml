@@ -76,35 +76,46 @@
                                 </StackPanel>
                             </Border>
                         </Grid>                        <!-- Progress Section -->
-                        <StackPanel Margin="0,25,0,0">
-                            <!-- Simple Progress Bar -->
-                            <controls:SimpleProgressBar 
-                                ProgressValue="{Binding Progress}"
-                                Title="📊 Estado del Proceso"
-                                StatusMessage="{Binding StatusMessage}"
-                                BackgroundColor="#FFFFFF"
-                                TitleColor="#2C3E50"
-                                PercentageColor="#28A745"
-                                MessageColor="#495057"
-                                BarForeground="#28A745"
-                                BarBackground="#E9ECEF"
-                                BarHeight="20"
-                                ShowHeader="True"
-                                ShowPercentage="True"
-                                ShowMessage="True"/>
-                                        
-                            <!-- Cancel Button -->
-                            <Button Content="❌ Cancelar Operación" 
-                                   Background="#DC3545" Foreground="White" 
-                                   Padding="8,4" BorderThickness="0" 
-                                   FontWeight="SemiBold" FontSize="11"
-                                   Margin="0,15,0,0"
-                                   Command="{Binding CancelProcessingCommand}"
-                                   Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <Grid Margin="0,25,0,0" 
+                             Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             
-                            <TextBlock Text="{Binding ExecutablePath}" FontSize="11" Foreground="#6C757D" 
-                                      TextWrapping="Wrap" Margin="0,10,0,0"/>
-                        </StackPanel>
+                            <!-- Barra de progreso simple -->
+                            <controls:SimpleProgressBar Grid.Row="0"
+                                                       ProgressValue="{Binding Progress}"
+                                                       Title="🔄 Procesando Archivos Excel"
+                                                       StatusMessage="{Binding StatusMessage}"
+                                                       BackgroundColor="#2C3E50"
+                                                       TitleColor="White"
+                                                       PercentageColor="#1ABC9C"
+                                                       MessageColor="#BDC3C7"
+                                                       BarForeground="#27AE60"
+                                                       BarBackground="#34495E"
+                                                       BarHeight="20"/>
+                            
+                            <!-- Información adicional -->
+                            <TextBlock Grid.Row="2"
+                                      HorizontalAlignment="Center"
+                                      Foreground="#BDC3C7"
+                                      FontSize="12"
+                                      Text="{Binding ExecutablePath}"
+                                      TextTrimming="CharacterEllipsis"/>
+                            
+                            <!-- Botón de cancelar dentro del panel -->
+                            <Button Grid.Row="4" 
+                                   Content="❌ Cancelar Operación" 
+                                   Background="#DC3545" Foreground="White" 
+                                   Padding="12,8" BorderThickness="0" 
+                                   FontWeight="SemiBold" FontSize="12"
+                                   HorizontalAlignment="Center"
+                                   Command="{Binding CancelProcessingCommand}"/>
+                        </Grid>
                         
                     </StackPanel>
                 </Border>

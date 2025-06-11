@@ -173,8 +173,7 @@
                                 <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            
-                            <!-- Barra de progreso simple -->
+                              <!-- Barra de progreso simple -->
                             <controls:SimpleProgressBar Grid.Row="0"
                                                        ProgressValue="{Binding ProgressValue}"
                                                        Title="🔄 Generando Estados de Cuenta"
@@ -186,7 +185,8 @@
                                                        BarForeground="#27AE60"
                                                        BarBackground="#34495E"
                                                        BarHeight="20"/>
-                              <!-- Información adicional -->
+                            
+                            <!-- Información adicional -->
                             <TextBlock Grid.Row="2"
                                       HorizontalAlignment="Center"
                                       Foreground="#BDC3C7"
