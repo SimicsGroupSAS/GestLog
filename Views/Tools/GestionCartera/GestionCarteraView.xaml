@@ -144,10 +144,7 @@
                                    ToolTip="Reiniciar progreso y estado"/>
                         </StackPanel>                        <!-- Simple Progress Panel -->
                         <Grid Grid.Row="2" 
-                             Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
+                             Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">                            <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
@@ -162,22 +159,9 @@
                                                        PercentageColor="#1ABC9C"
                                                        MessageColor="#BDC3C7"
                                                        BarForeground="#27AE60"
-                                                       BarBackground="#34495E"
-                                                       BarHeight="20"/>
-                            
-                            <!-- Información adicional -->
-                            <TextBlock Grid.Row="2"
-                                      HorizontalAlignment="Center"
-                                      Foreground="#BDC3C7"
-                                      FontSize="12">
-                                <Run Text="Documento "/>
-                                <Run Text="{Binding CurrentDocument, Mode=OneWay}" FontWeight="SemiBold" Foreground="#F39C12"/>
-                                <Run Text=" de "/>
-                                <Run Text="{Binding TotalDocuments, Mode=OneWay}" FontWeight="SemiBold" Foreground="#F39C12"/>
-                            </TextBlock>
-                            
-                            <!-- Botón de cancelar dentro del panel -->
-                            <Button Grid.Row="4" 
+                                                       BarBackground="#34495E"                                                       BarHeight="20"/>
+                              <!-- Botón de cancelar dentro del panel -->
+                            <Button Grid.Row="2"
                                    Content="❌ Cancelar Generación" 
                                    Background="#DC3545" Foreground="White" 
                                    Padding="12,8" BorderThickness="0" 
