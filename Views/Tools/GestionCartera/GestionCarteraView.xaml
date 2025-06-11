@@ -164,8 +164,7 @@
                                    FontSize="14" Margin="5"
                                    Command="{Binding ResetProgressCommand}"
                                    ToolTip="Reiniciar progreso y estado"/>
-                                   
-                            <Button Content="🔍 Información" 
+                                     <Button Content="🔍 Información" 
                                    Background="#34495E" Foreground="White"
                                    Padding="15,10" BorderThickness="0" FontWeight="SemiBold"
                                    FontSize="14" Margin="5"

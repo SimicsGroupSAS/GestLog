@@ -24,8 +24,13 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
     private readonly IPdfGeneratorService _pdfGenerator;
     private const string DEFAULT_TEMPLATE_FILE = "PlantillaSIMICS.png";
 
-    [ObservableProperty] private string _selectedExcelFilePath = string.Empty;
-    [ObservableProperty] private string _outputFolderPath = string.Empty;
+    [ObservableProperty] 
+    [NotifyCanExecuteChangedFor(nameof(GenerateDocumentsCommand))]
+    private string _selectedExcelFilePath = string.Empty;
+    
+    [ObservableProperty] 
+    [NotifyCanExecuteChangedFor(nameof(GenerateDocumentsCommand))]
+    private string _outputFolderPath = string.Empty;
     
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(TemplateStatusMessage))]
@@ -33,7 +38,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TemplateStatusMessage))]
-    private bool _useDefaultTemplate = true;    [ObservableProperty] private IReadOnlyList<GeneratedPdfInfo> _generatedDocuments = new List<GeneratedPdfInfo>();
+    private bool _useDefaultTemplate = true;
+
+    [ObservableProperty] private IReadOnlyList<GeneratedPdfInfo> _generatedDocuments = new List<GeneratedPdfInfo>();
     [ObservableProperty] private string _logText = string.Empty;
 
     public string TemplateStatusMessage => GetTemplateStatusMessage();
@@ -83,6 +90,10 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             {
                 _logger.LogWarning("⚠️ Plantilla predeterminada no encontrada en: {Path}", defaultTemplatePath);
             }
+            
+            // Notificar explícitamente que ha cambiado la posibilidad de ejecutar los comandos
+            // después de la inicialización
+            NotifyCommandsCanExecuteChanged();
         }
         catch (Exception ex)
         {
@@ -92,7 +103,8 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 
     [RelayCommand]
     private void SelectExcelFile()
-    {        try
+    {        
+        try
         {
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -100,13 +112,14 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
                 Filter = "Archivos Excel (*.xlsx;*.xls)|*.xlsx;*.xls|Todos los archivos (*.*)|*.*",
                 FilterIndex = 1,
                 RestoreDirectory = true
-            };
-
-            if (openFileDialog.ShowDialog() == true)
+            };            if (openFileDialog.ShowDialog() == true)
             {
                 SelectedExcelFilePath = openFileDialog.FileName;
                 _logger.LogInformation("📊 Archivo Excel seleccionado: {Path}", SelectedExcelFilePath);
                 StatusMessage = $"Archivo Excel seleccionado: {Path.GetFileName(SelectedExcelFilePath)}";
+                
+                // Asegurar notificación en el hilo de UI
+                NotifyCommandsCanExecuteChanged();
             }
         }
         catch (Exception ex)
@@ -133,6 +146,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
                 OutputFolderPath = folderDialog.SelectedPath;
                 _logger.LogInformation("📁 Carpeta de salida seleccionada: {Path}", OutputFolderPath);
                 StatusMessage = $"Carpeta de salida: {OutputFolderPath}";
+                
+                // Notificar explícitamente el cambio para el comando
+                NotifyCommandsCanExecuteChanged();
             }
         }
         catch (Exception ex)
@@ -144,7 +160,8 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 
     [RelayCommand]
     private void SelectTemplate()
-    {        try
+    {        
+        try
         {
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -200,7 +217,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogInformation("📁 Carpeta de salida: {OutputPath}", OutputFolderPath);
             _logger.LogInformation("🖼️ Plantilla: {Template}", UseDefaultTemplate ? TemplateFilePath : "Sin plantilla");
 
-            StatusMessage = "Generando documentos PDF...";            var templateToUse = UseDefaultTemplate ? TemplateFilePath : null;
+            StatusMessage = "Generando documentos PDF...";
+
+            var templateToUse = UseDefaultTemplate ? TemplateFilePath : null;
             var result = await _pdfGenerator.GenerateEstadosCuentaAsync(
                 SelectedExcelFilePath,
                 OutputFolderPath,
@@ -224,7 +243,8 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 
                 // Guardar lista de documentos generados
                 await SaveGeneratedDocumentsList();
-            }            else
+            }
+            else
             {
                 StatusMessage = "❌ Error en la generación";
                 _logger.LogWarning("❌ Error en la generación de documentos");
@@ -285,17 +305,21 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogError(ex, "Error al cancelar generación");
             StatusMessage = "Error al cancelar";
         }
+    }    public bool CanGenerateDocuments()
+    {
+        bool isNotProcessing = !IsProcessing;
+        bool hasExcelPath = !string.IsNullOrWhiteSpace(SelectedExcelFilePath);
+        bool excelExists = FileExistsWithNetworkSupport(SelectedExcelFilePath);
+        bool hasOutputPath = !string.IsNullOrWhiteSpace(OutputFolderPath);
+        
+        return isNotProcessing && hasExcelPath && excelExists && hasOutputPath;
     }
-
-    private bool CanGenerateDocuments() => 
-        !IsProcessing && 
-        !string.IsNullOrWhiteSpace(SelectedExcelFilePath) && 
-        File.Exists(SelectedExcelFilePath) &&
-        !string.IsNullOrWhiteSpace(OutputFolderPath);
 
     private bool CanOpenOutputFolder() => 
         !string.IsNullOrWhiteSpace(OutputFolderPath) && 
-        Directory.Exists(OutputFolderPath);    private void OnProgressUpdated((int current, int total, string status) progress)
+        Directory.Exists(OutputFolderPath);
+
+    private void OnProgressUpdated((int current, int total, string status) progress)
     {
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
@@ -318,19 +342,20 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             var textFilePath = Path.Combine(OutputFolderPath, "pdfs_generados.txt");
             var lines = new List<string>
             {
-                "==================================================",
-                $"PDF DOCUMENTS GENERATED - {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                "=================================================="
+                $"Fecha de generación: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                $"Total de PDFs generados: {GeneratedDocuments.Count}",
+                "-------------------------------------------------------------"
             };
 
             foreach (var doc in GeneratedDocuments)
             {
-                lines.Add($"{doc.NombreArchivo} - Empresa: {doc.NombreEmpresa} - NIT: {doc.Nit}");
+                lines.Add($"Empresa: {doc.NombreEmpresa}");
+                lines.Add($"NIT: {doc.Nit}");
+                lines.Add($"Archivo: {doc.NombreArchivo}");
+                lines.Add($"Tipo: {doc.TipoCartera}");
+                lines.Add($"Ruta: {doc.RutaArchivo}");
+                lines.Add("-------------------------------------------------------------");
             }
-
-            lines.Add("==================================================");
-            lines.Add($"Total documents: {GeneratedDocuments.Count}");
-            lines.Add("==================================================");
 
             await File.WriteAllLinesAsync(textFilePath, lines);
             _logger.LogInformation("💾 Lista de documentos guardada en: {Path}", textFilePath);
@@ -338,6 +363,84 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Error guardando lista de documentos generados");
+        }
+    }    /// <summary>
+    /// Verifica la existencia de un archivo, con manejo específico para rutas de red
+    /// </summary>
+    private bool FileExistsWithNetworkSupport(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return false;
+            
+        try
+        {
+            // Para rutas de red, implementamos un sistema más robusto
+            if (filePath.StartsWith(@"\\"))
+            {
+                // Implementar reintentos para mayor robustez en rutas de red
+                int maxRetries = 3;
+                int retryDelayMs = 500;
+                
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(filePath);
+                        bool exists = fileInfo.Exists;
+                        
+                        // Si lo encontramos, devolvemos inmediatamente
+                        if (exists) return true;
+                        
+                        // Si no existe y no es el último intento, esperamos antes de reintentar
+                        if (attempt < maxRetries)
+                        {
+                            Thread.Sleep(retryDelayMs);
+                            retryDelayMs *= 2; // Backoff exponencial
+                        }
+                    }
+                    catch (IOException)
+                    {
+                        if (attempt < maxRetries)
+                        {
+                            Thread.Sleep(retryDelayMs);
+                            retryDelayMs *= 2;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Ruta local normal
+            return File.Exists(filePath);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error verificando existencia del archivo: {FilePath}. Error: {Error}", 
+                filePath, ex.Message);
+            return false;
+        }
+    }/// <summary>
+    /// Notifica que el estado de los comandos puede haber cambiado, asegurando que la notificación
+    /// se ejecuta en el hilo de UI
+    /// </summary>
+    private void NotifyCommandsCanExecuteChanged()
+    {
+        // Asegurar que la notificación se ejecuta en el hilo de UI
+        if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            GenerateDocumentsCommand.NotifyCanExecuteChanged();
+        }
+        else
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() => 
+            {
+                GenerateDocumentsCommand.NotifyCanExecuteChanged();
+            });
         }
     }
 }

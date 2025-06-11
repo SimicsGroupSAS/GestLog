@@ -91,7 +91,9 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         {
             IsConfiguring = false;
         }
-    }    [RelayCommand]
+    }
+
+    [RelayCommand]
     private void ClearConfiguration()
     {
         SmtpServer = string.Empty;
@@ -100,8 +102,6 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         SmtpPassword = string.Empty;
         EnableSsl = true;
         IsEmailConfigured = false;
-        BccEmail = string.Empty;
-        CcEmail = string.Empty;
         StatusMessage = "Configuración de email limpiada";
         _logger.LogInformation("🧹 Configuración de email limpiada");
     }
@@ -188,13 +188,12 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             _logger.LogInformation("🔄 Cargando configuración SMTP...");
             
             var smtpConfig = _configurationService.Current.Smtp;
-              SmtpServer = smtpConfig.Server ?? string.Empty;
+            
+            SmtpServer = smtpConfig.Server ?? string.Empty;
             SmtpPort = smtpConfig.Port;
             SmtpUsername = smtpConfig.Username ?? string.Empty;
             EnableSsl = smtpConfig.UseSSL;
             IsEmailConfigured = smtpConfig.IsConfigured;
-            BccEmail = smtpConfig.BccEmail ?? string.Empty;
-            CcEmail = smtpConfig.CcEmail ?? string.Empty;
 
             // Cargar contraseña desde Windows Credential Manager
             if (!string.IsNullOrWhiteSpace(smtpConfig.Username))
@@ -229,7 +228,8 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
         try
         {
             var smtpConfig = _configurationService.Current.Smtp;
-              // Actualizar configuración (sin contraseña)
+            
+            // Actualizar configuración (sin contraseña)
             smtpConfig.Server = SmtpServer;
             smtpConfig.Port = SmtpPort;
             smtpConfig.Username = SmtpUsername;
@@ -237,8 +237,10 @@ public partial class SmtpConfigurationViewModel : ObservableObject, IDisposable
             smtpConfig.FromName = SmtpUsername;
             smtpConfig.UseSSL = EnableSsl;
             smtpConfig.UseAuthentication = !string.IsNullOrWhiteSpace(SmtpUsername);
-            smtpConfig.BccEmail = BccEmail;
-            smtpConfig.CcEmail = CcEmail;
+            
+            // ✅ CORRECCIÓN: Mantener campos BCC y CC existentes si ya están configurados
+            // Solo actualizamos si no están ya configurados para no sobrescribir valores existentes
+            // Los campos BCC y CC se configuran desde la ventana de configuración avanzada
 
             // Guardar contraseña de forma segura
             if (!string.IsNullOrWhiteSpace(SmtpUsername) && !string.IsNullOrWhiteSpace(SmtpPassword))

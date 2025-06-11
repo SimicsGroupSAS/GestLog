@@ -36,9 +36,18 @@ public partial class DocumentGenerationViewModel : ObservableObject
         try
         {
             await _mainViewModel.InitializeAsync();
-            
-            // Suscribirse a eventos de cambio de propiedad de los sub-ViewModels
-            _mainViewModel.PdfGeneration.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+              // Suscribirse a eventos de cambio de propiedad de los sub-ViewModels
+            _mainViewModel.PdfGeneration.PropertyChanged += (s, e) => 
+            {
+                OnPropertyChanged(e.PropertyName);
+                // Notificar cambios en comandos cuando cambien propiedades relevantes
+                if (e.PropertyName == nameof(_mainViewModel.PdfGeneration.SelectedExcelFilePath) ||
+                    e.PropertyName == nameof(_mainViewModel.PdfGeneration.OutputFolderPath) ||
+                    e.PropertyName == nameof(_mainViewModel.PdfGeneration.IsProcessing))
+                {
+                    GenerateDocumentsCommand.NotifyCanExecuteChanged();
+                }
+            };
             _mainViewModel.DocumentManagement.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
             _mainViewModel.AutomaticEmail.PropertyChanged += (s, e) => 
             {
@@ -253,11 +262,7 @@ public partial class DocumentGenerationViewModel : ObservableObject
 
     #region Métodos CanExecute
 
-    private bool CanGenerateDocuments() => 
-        !IsProcessing && 
-        !string.IsNullOrWhiteSpace(SelectedExcelFilePath) && 
-        File.Exists(SelectedExcelFilePath) &&
-        !string.IsNullOrWhiteSpace(OutputFolderPath);
+    private bool CanGenerateDocuments() => _mainViewModel.PdfGeneration.CanGenerateDocuments();
 
     private bool CanOpenOutputFolder() => 
         !string.IsNullOrWhiteSpace(OutputFolderPath) && 
