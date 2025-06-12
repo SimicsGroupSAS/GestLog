@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using ClosedXML.Excel;
 using GestLog.Services.Core.Logging;
+using GestLog.Modules.DaaterProccesor.Exceptions;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 
@@ -25,9 +26,26 @@ public class DataConsolidationService : IDataConsolidationService
     {
         return _logger.LoggedOperation("Consolidación de datos Excel", () =>
         {
-            _logger.LogDebug("📊 Iniciando consolidación de datos desde: {FolderPath}", folderPath);
-            
+            _logger.LogDebug("📊 Iniciando consolidación de datos desde: {FolderPath}", folderPath);            // Verificar que la carpeta existe
+            if (!Directory.Exists(folderPath))
+            {
+                var ex = new FileValidationException("La carpeta seleccionada no existe", folderPath, "FOLDER_EXISTS");
+                _logger.LogError(ex, "❌ Carpeta no encontrada: {FolderPath}", folderPath);
+                throw ex;
+            }
+
+            // Obtener archivos Excel en la carpeta
             var excelFiles = Directory.GetFiles(folderPath, "*.xlsx");
+            
+            // Verificar que hay archivos para procesar
+            if (excelFiles.Length == 0)
+            {
+                var ex = new FileValidationException("No se encontraron archivos Excel en la carpeta seleccionada", 
+                    folderPath, "NO_EXCEL_FILES");
+                _logger.LogError(ex, "❌ No se encontraron archivos Excel en: {FolderPath}", folderPath);
+                throw ex;
+            }
+            
             _logger.LogDebug("📄 Archivos Excel encontrados: {FileCount}", excelFiles.Length);
             
             var requiredColumns = new List<string>
@@ -77,28 +95,55 @@ public class DataConsolidationService : IDataConsolidationService
             var fileName = Path.GetFileName(file);
             _logger.LogDebug("📂 Procesando archivo {FileIndex}/{FileCount}: {FileName}", 
                 fileIndex + 1, fileCount, fileName);
-            
-            try
+              try
             {
+                // Verificar que la extensión sea .xlsx
+                if (!Path.GetExtension(file).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("⚠️ Archivo con formato incorrecto: {FileName}", fileName);
+                    throw new ExcelFormatException(
+                        $"El archivo '{fileName}' no tiene formato Excel (.xlsx)",
+                        file,
+                        ".xlsx");
+                }
+                
+                // Verificar que el archivo exista y no esté dañado
+                if (!File.Exists(file))
+                {
+                    _logger.LogWarning("⚠️ Archivo no encontrado: {FileName}", fileName);
+                    throw new FileValidationException(
+                        $"El archivo '{fileName}' no existe",
+                        file,
+                        "FILE_EXISTS");
+                }
+                
                 using var workbook = new XLWorkbook(file);
                 var worksheet = workbook.Worksheets.FirstOrDefault();
                 if (worksheet == null)
                 {
                     _logger.LogWarning("⚠️ Archivo sin worksheets válidos: {FileName}", fileName);
-                    continue;
+                    throw new ExcelFormatException(
+                        $"El archivo '{fileName}' no contiene hojas de trabajo válidas",
+                        file,
+                        "VALID_WORKSHEET");
                 }
-                
-                var headerRow = worksheet.Row(1);
+                  var headerRow = worksheet.Row(1);
                 var missingColumns = requiredColumns
                     .Where(col => !headerRow.Cells().Any(cell => cell.GetString().Trim().Equals(col, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
                     
                 if (missingColumns.Any())
                 {
+                    var columnasFaltantes = string.Join(", ", missingColumns);
                     _logger.LogWarning("⚠️ Archivo con columnas faltantes: {FileName} - Columnas: {MissingColumns}", 
-                        fileName, string.Join(", ", missingColumns));
-                    continue;
-                }                var rows = worksheet.RowsUsed().Skip(1).ToList();
+                        fileName, columnasFaltantes);
+                    
+                    // Lanzar excepción con mensaje detallado sobre las columnas faltantes
+                    throw new ExcelFormatException(
+                        $"El archivo '{fileName}' no tiene el formato esperado. Faltan columnas: {columnasFaltantes}",
+                        file,
+                        "REQUIRED_COLUMNS");
+                }var rows = worksheet.RowsUsed().Skip(1).ToList();
                 int rowCount = rows.Count;
                 int rowIndex = 0;
                 
@@ -249,10 +294,23 @@ public class DataConsolidationService : IDataConsolidationService
                 
                 totalRowsProcessed += rowCount;
                 _logger.LogDebug("✅ Archivo completado: {FileName} - {RowCount} filas procesadas", fileName, rowCount);
+            }            catch (ExcelFormatException ex)
+            {
+                // Re-lanzar excepciones específicas de Excel para que las maneje el ViewModel
+                _logger.LogError(ex, "❌ Error de formato en archivo: {FileName}", fileName);
+                throw;
+            }
+            catch (FileValidationException ex)
+            {
+                // Re-lanzar excepciones específicas de validación para que las maneje el ViewModel
+                _logger.LogError(ex, "❌ Error de validación en archivo: {FileName}", fileName);
+                throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error procesando archivo: {FileName}", fileName);
+                // Envolver excepciones genéricas en nuestras propias excepciones para mejor manejo
+                throw new ExcelDataException($"Error al procesar el archivo '{fileName}': {ex.Message}", file, ex);
             }
             fileIndex++;        }
         

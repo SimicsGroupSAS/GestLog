@@ -13,6 +13,7 @@ using ClosedXML.Excel;
 using Ookii.Dialogs.Wpf;
 using System.Diagnostics;
 using GestLog.Modules.DaaterProccesor.Services;
+using GestLog.Modules.DaaterProccesor.Exceptions;
 using GestLog.Services.Core.Logging;
 using GestLog.Services.Core.UI;
 using Microsoft.Extensions.Logging;
@@ -253,6 +254,42 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Operación cancelada por el usuario.";
             System.Windows.MessageBox.Show("Operación cancelada por el usuario.", "Cancelado");
         }
+        catch (ExcelFormatException ex)
+        {
+            stopwatch.Stop();
+            _logger.LogExcelProcessingError("Excel_Format_Error", ex);
+            _logger.LogPerformance("ProcessExcelFiles_Error", stopwatch.Elapsed);
+            
+            ResetProgress();
+            StatusMessage = $"Error de formato Excel: {ex.Message}";
+            System.Windows.MessageBox.Show(
+                $"Error de formato en archivo Excel: {ex.Message}\n\nVerifique que el archivo tenga todas las columnas requeridas.", 
+                "Error de formato");
+        }
+        catch (FileValidationException ex)
+        {
+            stopwatch.Stop();
+            _logger.LogExcelProcessingError("File_Validation_Error", ex);
+            _logger.LogPerformance("ProcessExcelFiles_Error", stopwatch.Elapsed);
+            
+            ResetProgress();
+            StatusMessage = $"Error de archivo: {ex.Message}";
+            System.Windows.MessageBox.Show(
+                $"Error en el archivo: {ex.Message}\n\nVerifique que los archivos existan y tengan el formato correcto.", 
+                "Error de archivo");
+        }
+        catch (ResourceException ex)
+        {
+            stopwatch.Stop();
+            _logger.LogExcelProcessingError("Resource_Error", ex);
+            _logger.LogPerformance("ProcessExcelFiles_Error", stopwatch.Elapsed);
+            
+            ResetProgress();
+            StatusMessage = $"Error de recursos: {ex.Message}";
+            System.Windows.MessageBox.Show(
+                $"Error en archivo de recursos: {ex.Message}\n\nVerifique que los archivos de recursos estén correctamente instalados.", 
+                "Error de recursos");
+        }
         catch (Exception ex)
         {
             stopwatch.Stop();
@@ -262,7 +299,7 @@ public partial class MainViewModel : ObservableObject
             // ✅ Reset seguro del progreso en caso de error
             ResetProgress();
             StatusMessage = $"Error: {ex.Message}";
-            System.Windows.MessageBox.Show($"Ocurrió un error inesperado: {ex.Message}", "Error");
+            System.Windows.MessageBox.Show($"Ocurrió un error inesperado: {ex.Message}\n\nPor favor contacte al soporte técnico.", "Error");
         }
         finally
         {

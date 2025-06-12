@@ -6,6 +6,7 @@ using System.IO;
 using ClosedXML.Excel;
 using FuzzySharp;
 using GestLog.Services.Core.Logging;
+using GestLog.Modules.DaaterProccesor.Exceptions;
 
 namespace GestLog.Modules.DaaterProccesor.Services;
 
@@ -52,11 +53,9 @@ public class ResourceLoaderService : IResourceLoaderService
                     _logger.LogDebug("✅ Archivo encontrado en ruta física: {FilePath}", path);
                     return new FileStream(path, FileMode.Open, FileAccess.Read);
                 }
-            }
-
-            var errorMessage = $"No se encontró el archivo {fileName} ni como embedded resource ni como archivo físico en ninguna de las rutas esperadas: {string.Join(", ", possiblePaths)}";
+            }            var errorMessage = $"No se encontró el archivo {fileName} ni como embedded resource ni como archivo físico en ninguna de las rutas esperadas: {string.Join(", ", possiblePaths)}";
             _logger.LogError(new FileNotFoundException(errorMessage), "❌ Error al buscar archivo de recursos: {FileName}", fileName);
-            throw new FileNotFoundException(errorMessage);
+            throw new ResourceException($"Recurso no encontrado: {fileName}", fileName);
         }
         catch (Exception ex) when (!(ex is FileNotFoundException))
         {
