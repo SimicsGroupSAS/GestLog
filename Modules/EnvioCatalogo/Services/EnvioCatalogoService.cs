@@ -505,8 +505,7 @@ namespace GestLog.Modules.EnvioCatalogo.Services
         /// Genera el cuerpo personalizado del email con la plantilla comercial
         /// </summary>
         private string GeneratePersonalizedEmailBody(string clientName)
-        {
-            var template = @"
+        {        var template = @"
 <!DOCTYPE html>
 <html>
 <head>
@@ -517,7 +516,7 @@ namespace GestLog.Modules.EnvioCatalogo.Services
     <div style='max-width: 800px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
         
         <!-- Header -->
-        <div style='background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;'>
+        <div style='background: linear-gradient(135deg, #0f8937, #12a043); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;'>
             <h1 style='margin: 0; font-size: 24px; font-weight: bold;'>SIMICS GROUP SAS</h1>
             <p style='margin: 5px 0 0 0; font-size: 16px; opacity: 0.9;'>Importadores y Comercializadores de Aceros y Servicios</p>
         </div>
@@ -537,11 +536,11 @@ namespace GestLog.Modules.EnvioCatalogo.Services
             </p>
             
             <div style='background-color: #f8f9fa; padding: 25px; border-radius: 6px; margin: 25px 0;'>
-                <p style='font-size: 14px; color: #27ae60; margin-bottom: 15px; line-height: 1.7;'>
+                <p style='font-size: 14px; color: #0f8937; margin-bottom: 15px; line-height: 1.7;'>
                     🟢 <strong>Somos importadores y comercializadores de aceros de todo tipo</strong>, tenemos material en stock suficiente para cubrir sus necesidades, sin embargo, también participamos en proyectos representando a las siderúrgicas más importantes de China, Japón, Turquía entre otros países.
                 </p>
                 
-                <p style='font-size: 14px; color: #27ae60; margin-bottom: 10px; line-height: 1.7;'>
+                <p style='font-size: 14px; color: #0f8937; margin-bottom: 10px; line-height: 1.7;'>
                     🟢 <strong>Podemos comercializar los siguientes productos:</strong>
                 </p>
                 
@@ -553,20 +552,20 @@ namespace GestLog.Modules.EnvioCatalogo.Services
                     <li><strong>Barras perforadas</strong></li>
                 </ul>
                 
-                <p style='font-size: 14px; color: #27ae60; margin: 15px 0; line-height: 1.7;'>
+                <p style='font-size: 14px; color: #0f8937; margin: 15px 0; line-height: 1.7;'>
                     🟢 <strong>Importamos calidades especiales</strong> que no se consiguen en el mercado Colombiano. Puede consultarnos si tiene algún requerimiento puntual para consultarlo con los diferentes molinos.
                 </p>
                 
-                <p style='font-size: 14px; color: #27ae60; margin: 15px 0; line-height: 1.7;'>
+                <p style='font-size: 14px; color: #0f8937; margin: 15px 0; line-height: 1.7;'>
                     🟢 <strong>Realizamos trabajos de mecanizado:</strong> oxicortes, corte por plasma, láser, torno, fresadora.
                 </p>
                 
-                <p style='font-size: 14px; color: #27ae60; margin: 15px 0; line-height: 1.7;'>
+                <p style='font-size: 14px; color: #0f8937; margin: 15px 0; line-height: 1.7;'>
                     🟢 <strong>Comercializamos materiales de ferretería,</strong> soldaduras y repuestos para mantenimientos de plantas industriales.
                 </p>
             </div>
             
-            <div style='background-color: #e8f5e8; padding: 20px; border-left: 4px solid #27ae60; margin: 25px 0;'>
+            <div style='background-color: #e8f5e8; padding: 20px; border-left: 4px solid #0f8937; margin: 25px 0;'>
                 <p style='font-size: 14px; color: #2c3e50; margin: 0; line-height: 1.7; font-weight: 500;'>
                     <strong>Nuestro valor agregado</strong> es que podemos atenderlos de una manera rápida y oportuna no solo vendiendo materiales sino realizando un acompañamiento técnico para cada uno de sus proyectos. Somos una empresa con un personal técnico y profesional que lleva más de <strong>40 años de experiencia</strong> en el sector.
                 </p>
@@ -581,7 +580,7 @@ namespace GestLog.Modules.EnvioCatalogo.Services
             </p>
             
             <!-- Contact Info -->
-            <div style='background: linear-gradient(135deg, #34495e, #2c3e50); color: white; padding: 25px; border-radius: 6px; margin: 30px 0;'>
+            <div style='background: linear-gradient(135deg, #9d9d9c, #8a8a89); color: white; padding: 25px; border-radius: 6px; margin: 30px 0;'>
                 <h3 style='margin: 0 0 15px 0; font-size: 18px; color: #ecf0f1;'>📞 Contacto</h3>
                 <p style='margin: 8px 0; font-size: 14px; line-height: 1.6;'>
                     📧 <strong>Email:</strong> contactenos@simicsgroup.com
