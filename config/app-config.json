@@ -35,12 +35,26 @@
     "isConfigured": true,
     "bccEmail": "backup@simicsgroup.com",
     "ccEmail": "admin@simicsgroup.com"
-  },
-  "modules": {
+  },  "modules": {
     "gestionCartera": {
       "enabled": true,
       "outputFolder": "Output",
       "templatePath": "Assets/PlantillaSIMICS.png"
+    },
+    "envioCatalogo": {
+      "smtp": {
+        "server": "",
+        "port": 587,
+        "useSSL": true,
+        "useAuthentication": true,
+        "username": "",
+        "fromEmail": "",
+        "fromName": "",
+        "timeout": 30000,
+        "isConfigured": false,
+        "bccEmail": "",
+        "ccEmail": ""
+      }
     }
   },
   "configVersion": "1.0.0",

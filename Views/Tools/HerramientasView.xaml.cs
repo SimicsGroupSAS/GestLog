@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using GestLog.Views.Tools.DaaterProccesor;
 using GestLog.Views.Tools.ErrorLog;
+using GestLog.Views.Tools.EnvioCatalogo;
 using GestLog.Views.Configuration;
 using GestLog.Views;
 using GestLog.Services.Core.Logging;
@@ -74,10 +75,24 @@ public partial class HerramientasView : System.Windows.Controls.UserControl
         {
             var gestionCarteraView = new Views.Tools.GestionCartera.GestionCarteraView();
             _mainWindow?.NavigateToView(gestionCarteraView, "Gestión de Cartera");
-        }
-        catch (System.Exception ex)
+        }        catch (System.Exception ex)
         {
             var errorHandler = LoggingService.GetErrorHandler();
             errorHandler.HandleException(ex, "Mostrar gestión de cartera desde herramientas");
         }
-    }}
+    }
+
+    private void BtnEnvioCatalogo_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var envioCatalogoView = new EnvioCatalogoView();
+            _mainWindow?.NavigateToView(envioCatalogoView, "Envío de Catálogo");
+        }
+        catch (System.Exception ex)
+        {
+            var errorHandler = LoggingService.GetErrorHandler();
+            errorHandler.HandleException(ex, "Mostrar envío de catálogo desde herramientas");
+        }
+    }
+}

@@ -59,22 +59,20 @@
                                    Click="BtnGestionCartera_Click"/>
                         </StackPanel>
                     </Border>
-                    
-                    <!-- Future Tool Card -->
-                    <Border Grid.Column="4" Grid.Row="0" Background="#F8F9FA" Padding="25" 
-                           BorderBrush="#BDC3C7" BorderThickness="2" Opacity="0.7">
+                      <!-- Envío de Catálogo Card -->
+                    <Border Grid.Column="4" Grid.Row="0" Background="#ECF0F1" Padding="25">
                         <StackPanel>
-                            <TextBlock Text="🔧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                            <TextBlock Text="Próximas Herramientas" FontSize="20" FontWeight="SemiBold" 
-                                      HorizontalAlignment="Center" Foreground="#95A5A6" Margin="0,0,0,10"/>
-                            <TextBlock Text="Espacio reservado para futuras integraciones de herramientas en el sistema modular"
-                                      FontSize="14" Foreground="#95A5A6" TextWrapping="Wrap" 
+                            <TextBlock Text="📧" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                            <TextBlock Text="Envío de Catálogo" FontSize="20" FontWeight="SemiBold" 
+                                      HorizontalAlignment="Center" Foreground="#2C3E50" Margin="0,0,0,10"/>
+                            <TextBlock Text="Envío masivo del catálogo de productos y servicios a múltiples clientes por email"
+                                      FontSize="14" Foreground="#7F8C8D" TextWrapping="Wrap" 
                                       HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>
-                            <Button Content="Próximamente" 
-                                   Background="#95A5A6" Foreground="White" 
+                            <Button Name="btnEnvioCatalogo" Content="Abrir Envío de Catálogo" 
+                                   Background="#1ABC9C" Foreground="White" 
                                    Padding="15,8" BorderThickness="0" 
                                    FontWeight="SemiBold"
-                                   IsEnabled="False"/>
+                                   Click="BtnEnvioCatalogo_Click"/>
                         </StackPanel>
                     </Border>
                       

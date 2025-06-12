@@ -27,7 +27,9 @@ namespace GestLog.Views
                 "Sistema modular de gestión integrada\n" +
                 "Desarrollado con .NET 9 y WPF\n\n" +
                 "Módulos integrados:\n" +
-                "• DaaterProccesor - Procesamiento de datos Excel\n\n" +
+                "• DaaterProccesor - Procesamiento de datos Excel\n" +
+                "• Gestión de Cartera - Estados de cuenta PDF\n" +
+                "• Envío de Catálogo - Envío masivo de catálogo\n\n" +
                 "Estado: ✅ Operativo",
                 "Información del Sistema",
                 MessageBoxButton.OK,
