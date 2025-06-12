@@ -1,15 +1,20 @@
 ````instructions
-# Instrucciones de GitHub Copilot para GestLog
+# 🚀 Instrucciones GitHub Copilot - GestLog
 
-## 🎯 Contexto del Proyecto
+## 🎯 **Contexto**
+WPF + .NET 9.0 | **Código**: inglés | **UI**: español (es-CO) | **MVVM** estricto
 
-GestLog es una aplicación WPF modular para gestión empresarial integral con arquitectura modular y separación de responsabilidades.
+## ⚡ **Reglas Fundamentales**
+1. **SRP**: Una responsabilidad por clase → **Si viola SRP → Refactorizar inmediatamente**
+2. **Async**: Siempre para I/O + CancellationToken
+3. **DI**: Constructor injection obligatorio
+4. **Logging**: IGestLogLogger en todo
+5. **MVVM**: Cero lógica en code-behind
+6. **Validación**: Antes de procesar
+7. **Errores**: Específicos del dominio + mensajes claros en español
 
-**Idioma**: Código en inglés, UI y mensajes en español (es-CO).
+## 🏗️ **Arquitectura Base**
 
-## 🏗️ Arquitectura Fundamental
-
-### Patrón MVVM Estricto
 ```csharp
 // ✅ ViewModels con CommunityToolkit.Mvvm
 public partial class DocumentGenerationViewModel : ObservableObject
@@ -17,126 +22,122 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private readonly IPdfGeneratorService _pdfService;
     private readonly IGestLogLogger _logger;
     
-    [ObservableProperty]
-    private string _selectedFilePath;
+    [ObservableProperty] private string _selectedFilePath;
     
     [RelayCommand]
-    private async Task GenerateDocumentsAsync(CancellationToken cancellationToken)
+    private async Task GenerateAsync(CancellationToken cancellationToken)
     {
-        // Implementación con manejo de errores y logging
+        try { /* Implementación */ }
+        catch (SpecificException ex) { /* Manejo específico */ }
     }
 }
 
-// ❌ NO lógica en Code-Behind
-```
-
-### Inyección de Dependencias
-```csharp
-// ✅ Registro en App.xaml.cs
+// ✅ DI Registration
 ServiceLocator.RegisterSingleton<IGestLogLogger, GestLogLogger>();
-ServiceLocator.RegisterSingleton<IPdfGeneratorService, PdfGeneratorService>();
 ServiceLocator.RegisterTransient<DocumentGenerationViewModel>();
+```
 
-// ✅ Constructor injection
-public PdfGeneratorService(IGestLogLogger logger, IConfigurationService config)
+## 📋 **Manejo de Errores Específicos**
+
+### **Excepciones por Dominio**
+```csharp
+// ✅ Excel
+public class ExcelFormatException : GestLogException
 {
-    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    _config = config ?? throw new ArgumentNullException(nameof(config));
+    public ExcelFormatException(string message, string filePath, string expectedFormat) 
+        : base(message, "EXCEL_FORMAT_ERROR") { }
+}
+
+// ✅ Email
+public class EmailSendException : GestLogException
+{
+    public EmailSendException(string message, string emailAddress, Exception innerException) 
+        : base(message, "EMAIL_SEND_ERROR", innerException) { }
+}
+
+// ✅ Archivos
+public class FileValidationException : GestLogException
+{
+    public FileValidationException(string message, string filePath, string validationRule) 
+        : base(message, "FILE_VALIDATION_ERROR") { }
 }
 ```
 
-## 🎯 Principio de Responsabilidad Única (SRP)
-
-**Cada clase debe tener una sola responsabilidad y una sola razón para cambiar.**
-
-### Señales de Violación SRP
-- Múltiples responsabilidades en una clase
-- Comentarios que indican secciones diferentes (// Email, // PDF, etc.)
-- Dificultad para nombrar la clase específicamente
-- Métodos que manejan conceptos diferentes
-
-### Refactorización SRP
+### **Validación de Excel**
 ```csharp
-// ❌ Violación
-public class DocumentGenerationViewModel
-{
-    // PDF Generation + Email Sending + SMTP Config
-}
+// Validar archivo existe
+if (!File.Exists(filePath))
+    throw new FileValidationException("El archivo Excel seleccionado no existe", filePath, "FILE_EXISTS");
 
-// ✅ SRP Aplicado
-public class PdfGenerationViewModel { /* Solo PDF */ }
-public class AutomaticEmailViewModel { /* Solo Email */ }
-public class SmtpConfigurationViewModel { /* Solo SMTP */ }
-public class MainDocumentGenerationViewModel { /* Orquestador */ }
+// Validar formato
+if (!Path.GetExtension(filePath).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+    throw new ExcelFormatException("El archivo debe ser un Excel (.xlsx)", filePath, ".xlsx");
+
+// Validar columnas requeridas
+var requiredColumns = new[] { "EMPRESA", "NIT", "EMAIL", "DIRECCION" };
+var missingColumns = requiredColumns.Where(col => !worksheet.Row(1).Cells().Any(c => c.Value.ToString().Contains(col))).ToList();
+if (missingColumns.Any())
+    throw new ExcelFormatException($"Faltan columnas: {string.Join(", ", missingColumns)}", filePath, "REQUIRED_COLUMNS");
 ```
 
-## 🔄 Programación Asíncrona
-
+### **Validación de Email**
 ```csharp
-// ✅ SIEMPRE async/await para I/O
-public async Task<List<GeneratedPdfInfo>> GenerateDocumentsAsync(
-    string excelPath, 
-    CancellationToken cancellationToken = default)
+// Validar configuración SMTP
+if (string.IsNullOrEmpty(_smtpConfig.Server))
+    throw new ConfigurationException("No se ha configurado el servidor SMTP", "SmtpServer");
+
+// Validar destinatario
+if (!IsValidEmail(recipient))
+    throw new EmailSendException($"Email '{recipient}' no es válido", recipient, null);
+
+// Manejar errores SMTP específicos
+catch (SmtpException ex)
+{
+    var userMessage = ex.StatusCode switch
+    {
+        SmtpStatusCode.MailboxBusy => "El servidor está ocupado. Intente más tarde",
+        SmtpStatusCode.MailboxUnavailable => $"Email '{recipient}' no existe",
+        SmtpStatusCode.TransactionFailed => "Error de autenticación. Verifique credenciales",
+        _ => "Error enviando email. Verifique configuración SMTP"
+    };
+    throw new EmailSendException(userMessage, recipient, ex);
+}
+```
+
+### **Manejo en ViewModels**
+```csharp
+[RelayCommand]
+private async Task ProcessAsync(CancellationToken cancellationToken)
 {
     try
     {
-        _logger.LogInformation("Iniciando generación desde {ExcelPath}", excelPath);
+        IsProcessing = true;
+        ErrorMessage = string.Empty;
         
-        if (string.IsNullOrWhiteSpace(excelPath))
-            throw new ArgumentException("Ruta requerida", nameof(excelPath));
-            
-        var companies = await LoadCompaniesFromExcelAsync(excelPath, cancellationToken);
-        
-        // Procesamiento con progreso y cancelación
-        for (int i = 0; i < companies.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var result = await GenerateDocumentForClientAsync(companies[i], cancellationToken);
-            results.Add(result);
-        }
-        
-        return results;
+        var result = await _service.ProcessAsync(SelectedFile, cancellationToken);
+        await ShowSuccessAsync($"Procesados {result.Count} elementos");
+    }
+    catch (ExcelFormatException ex)
+    {
+        ErrorMessage = $"Error Excel: {ex.Message}";
+        await ShowErrorAsync("Error de Formato", ex.Message);
+    }
+    catch (EmailSendException ex)
+    {
+        ErrorMessage = $"Error Email: {ex.Message}";
+        await ShowErrorAsync("Error de Envío", ex.Message);
     }
     catch (OperationCanceledException)
     {
-        _logger.LogWarning("Operación cancelada");
-        throw;
+        ErrorMessage = "Operación cancelada";
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Error en generación");
-        throw;
+        _logger.LogError(ex, "Unexpected error");
+        ErrorMessage = "Error inesperado";
+        await ShowErrorAsync("Error", "Contacte soporte técnico");
     }
-}
-```
-
-## 📋 Logging y Manejo de Errores
-
-```csharp
-// ✅ Logging estructurado
-_logger.LogInformation("PDF generado para {CompanyName}", company.Name);
-_logger.LogError(ex, "Error generando PDF para {CompanyName}", company.Name);
-
-// ✅ Excepciones específicas
-public class PdfGenerationException : GestLogException
-{
-    public string CompanyName { get; }
-    public PdfGenerationException(string message, string companyName) 
-        : base(message, "PDF_GENERATION")
-    {
-        CompanyName = companyName;
-    }
-}
-
-// ✅ Manejo en ViewModels
-try
-{
-    var result = await _pdfService.GenerateDocumentsAsync(filePath, cancellationToken);
-    await ShowSuccessMessageAsync($"Generados {result.Count} documentos");
-}
-catch (PdfGenerationException ex)
-{
-    await ShowErrorMessageAsync("Error de Generación", ex.Message);
+    finally { IsProcessing = false; }
 }
 ```
 
