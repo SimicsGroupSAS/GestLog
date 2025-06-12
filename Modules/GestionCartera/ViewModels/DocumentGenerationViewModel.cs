@@ -178,8 +178,20 @@ public partial class DocumentGenerationViewModel : ObservableObject
     public bool HasEmailExcel => _mainViewModel.AutomaticEmail.HasEmailExcel;
     public int CompaniesWithEmail => _mainViewModel.AutomaticEmail.CompaniesWithEmail;
     public int CompaniesWithoutEmail => _mainViewModel.AutomaticEmail.CompaniesWithoutEmail;
-    public bool IsSendingEmail => _mainViewModel.AutomaticEmail.IsSendingEmail;
-    public bool CanSendAutomatically => _mainViewModel.AutomaticEmail.CanSendAutomatically;
+    public bool IsSendingEmail => _mainViewModel.AutomaticEmail.IsSendingEmail;    public bool CanSendAutomatically => _mainViewModel.AutomaticEmail.CanSendAutomatically;
+
+    /// <summary>
+    /// Determina si se puede cancelar el envío de emails
+    /// </summary>
+    public bool CanCancelEmailSending => _mainViewModel.AutomaticEmail.CanCancelEmailSending;    // Propiedades del panel de finalización
+    public bool ShowCompletionPanel => _mainViewModel.PdfGeneration.ShowCompletionPanel;
+    public string CompletionMessage => _mainViewModel.PdfGeneration.CompletionMessage;
+
+    // Propiedades de progreso de email
+    public double EmailProgressValue => _mainViewModel.AutomaticEmail.EmailProgressValue;
+    public string EmailStatusMessage => _mainViewModel.AutomaticEmail.EmailStatusMessage;
+    public int CurrentEmailDocument => _mainViewModel.AutomaticEmail.CurrentEmailDocument;
+    public int TotalEmailDocuments => _mainViewModel.AutomaticEmail.TotalEmailDocuments;
 
     public string EmailSubject 
     { 
@@ -247,12 +259,11 @@ public partial class DocumentGenerationViewModel : ObservableObject
     private async Task ConfigureSmtp() => await _mainViewModel.SmtpConfiguration.ConfigureSmtpCommand.ExecuteAsync(null);
 
     [RelayCommand]
-    private async Task TestSmtpConnection() => await _mainViewModel.SmtpConfiguration.TestSmtpConnectionCommand.ExecuteAsync(null);
-
-    // Comandos de generación de PDF
-    [RelayCommand(CanExecute = nameof(IsProcessing))]
-    private void CancelGeneration() => _mainViewModel.PdfGeneration.CancelGenerationCommand.Execute(null);    [RelayCommand]
-    private void ResetProgress() => _mainViewModel.PdfGeneration.ResetProgressCommand.Execute(null);
+    private async Task TestSmtpConnection() => await _mainViewModel.SmtpConfiguration.TestSmtpConnectionCommand.ExecuteAsync(null);    // Comandos de generación de PDF
+    [RelayCommand]
+    private void CancelGeneration() => _mainViewModel.PdfGeneration.CancelGenerationCommand.Execute(null);
+      [RelayCommand]
+    private void ResetProgress() => _mainViewModel.PdfGeneration.ResetProgressDataCommand.Execute(null);
 
     [RelayCommand]
     private void GoToEmailTab() => _mainViewModel.PdfGeneration.GoToEmailTabCommand.Execute(null);
@@ -267,6 +278,12 @@ public partial class DocumentGenerationViewModel : ObservableObject
     {
         await _mainViewModel.SendDocumentsAutomaticallyCommand.ExecuteAsync(null);
     }
+
+    /// <summary>
+    /// Comando para cancelar el envío de emails
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanCancelEmailSending))]
+    private void CancelEmailSending() => _mainViewModel.AutomaticEmail.CancelEmailSendingCommand.Execute(null);
 
     #endregion
 

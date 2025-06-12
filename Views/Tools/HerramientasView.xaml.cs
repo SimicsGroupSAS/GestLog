@@ -68,9 +68,7 @@ public partial class HerramientasView : System.Windows.Controls.UserControl
             var errorHandler = LoggingService.GetErrorHandler();
             errorHandler.HandleException(ex, "Mostrar registro de errores desde herramientas");
         }
-    }
-
-    private void BtnGestionCartera_Click(object sender, RoutedEventArgs e)
+    }    private void BtnGestionCartera_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -82,5 +80,4 @@ public partial class HerramientasView : System.Windows.Controls.UserControl
             var errorHandler = LoggingService.GetErrorHandler();
             errorHandler.HandleException(ex, "Mostrar gestión de cartera desde herramientas");
         }
-    }
-}
+    }}

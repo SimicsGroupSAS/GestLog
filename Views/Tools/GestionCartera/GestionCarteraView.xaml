@@ -16,9 +16,8 @@
         <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
     </UserControl.Resources>
     <Grid Background="White">
-        <DockPanel>
-            <!-- Header -->
-            <Border DockPanel.Dock="Top" Background="#2C3E50" Padding="20">
+        <DockPanel>            <!-- Header -->
+            <Border DockPanel.Dock="Top" Background="#2C3E50" Padding="15">
                 <StackPanel>
                     <TextBlock Text="💼 Gestión de Cartera" 
                               FontSize="24" FontWeight="SemiBold" 
@@ -27,20 +26,17 @@
                               FontSize="14" Foreground="#BDC3C7" 
                               HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
-            </Border>
-
-            <!-- Main Content -->
+            </Border>            <!-- Main Content -->
             <TabControl x:Name="mainTabControl" Background="White" BorderThickness="0">
                 <!-- Tab: Generación de Documentos -->
-                <TabItem Header="📄 Generación de Documentos" FontSize="14" Padding="15,8">                    <Grid Margin="20">                        <Grid.RowDefinitions>
+                <TabItem Header="📄 Generación de Documentos" FontSize="14" Padding="15,8">
+                    <Grid Margin="15"><Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Configuration Panel -->
-                        <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,20">
+                        </Grid.RowDefinitions>                        <!-- Configuration Panel -->
+                        <Border Grid.Row="0" Background="#F8F9FA" Padding="15" CornerRadius="5" Margin="0,0,0,15">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -83,54 +79,24 @@
                                            Command="{Binding OpenOutputFolderCommand}"/>
                                 </StackPanel>                                <TextBlock Grid.Row="4" Grid.Column="2" 
                                           Text="{Binding OutputFolderPath, TargetNullValue='Carpeta por defecto'}"
-                                          Foreground="#7F8C8D" FontStyle="Italic" TextTrimming="CharacterEllipsis"/>                            </Grid>
-                        </Border>
-                        
-                        <!-- Panel de Plantilla -->
-                        <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,140,0,20">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                
-                                <TextBlock Grid.Row="0" Text="🎨 Plantilla de Fondo:" 
-                                          FontWeight="SemiBold" Foreground="#2C3E50"
-                                          Margin="0,0,0,10"/>
-                                          
-                                <Grid Grid.Row="1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="15"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    
-                                    <StackPanel Grid.Column="0" Orientation="Vertical">
-                                        <Button Content="Personalizar Plantilla" 
-                                               Background="#E67E22" Foreground="White"
-                                               Padding="10,5" BorderThickness="0" FontWeight="SemiBold"
-                                               Command="{Binding SelectTemplateFileCommand}"
-                                               HorizontalAlignment="Left"/>
-                                               
-                                        <Button Content="No usar plantilla" ToolTip="Desactivar uso de plantilla"
-                                               Background="#E74C3C" Foreground="White"
-                                               Padding="10,5" BorderThickness="0" FontWeight="SemiBold"
-                                               Margin="0,5,0,0" HorizontalAlignment="Left"
-                                               Command="{Binding ClearTemplateCommand}"/>
-                                    </StackPanel>
-                                    
-                                    <StackPanel Grid.Column="2" Orientation="Vertical">
-                                        <CheckBox IsChecked="{Binding UseDefaultTemplate}" 
-                                                  Content="Usar plantilla predeterminada" Margin="0,5,0,0"
-                                                  Foreground="#7F8C8D"/>
-                                        <TextBlock Text="{Binding TemplateStatusMessage}" 
-                                                   Foreground="#7F8C8D" Margin="0,5,0,0" 
-                                                   FontStyle="Italic" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Grid>
+                                          Foreground="#7F8C8D" FontStyle="Italic" TextTrimming="CharacterEllipsis"/>
+
+                                <!-- Botón de Plantilla pequeño -->
+                                <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal" Margin="0,5,0,0">
+                                    <Button Content="🎨 Plantilla" 
+                                           Background="#E67E22" Foreground="White"
+                                           Padding="8,4" BorderThickness="0" FontWeight="SemiBold"
+                                           FontSize="11"
+                                           Command="{Binding SelectTemplateFileCommand}"
+                                           ToolTip="Configurar plantilla de fondo para los PDFs"/>
+                                    <TextBlock Text="{Binding TemplateStatusMessage}" 
+                                               VerticalAlignment="Center" Margin="8,0,0,0"
+                                               Foreground="#7F8C8D" FontStyle="Italic" FontSize="10"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
                             </Grid>
-                        </Border>                        <!-- Action Buttons -->
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        </Border><!-- Action Buttons -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
                             <Button Content="🚀 Generar Estados de Cuenta" 
                                    Background="#27AE60" Foreground="White"
                                    Padding="20,10" BorderThickness="0" FontWeight="SemiBold"
@@ -168,22 +134,21 @@
                                    HorizontalAlignment="Center"
                                    Command="{Binding CancelGenerationCommand}"/>
                         </Grid>
-                        
-                        <!-- Panel de Finalización -->
+                          <!-- Panel de Finalización -->
                         <Border Grid.Row="2" 
                                Background="#D4EDDA" 
                                BorderBrush="#28A745" 
                                BorderThickness="2" 
                                CornerRadius="8" 
-                               Padding="20"
-                               Margin="0,10,0,0"
+                               Padding="15"
+                               Margin="0,5,0,0"
                                Visibility="{Binding ShowCompletionPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="15"/>
+                                    <RowDefinition Height="10"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="20"/>
+                                    <RowDefinition Height="10"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 
@@ -228,8 +193,7 @@
                                             </Style>
                                         </Button.Style>
                                     </Button>
-                                    
-                                    <Button Content="📂 Ver Documentos" 
+                                      <Button Content="📂 Ver Documentos" 
                                            Background="#6C757D" 
                                            Foreground="White"
                                            Padding="20,15" 
@@ -237,12 +201,23 @@
                                            FontWeight="SemiBold"
                                            FontSize="14" 
                                            Margin="10"
-                                           CornerRadius="5"
                                            Command="{Binding OpenOutputFolderCommand}"
                                            ToolTip="Abrir la carpeta donde se guardaron los documentos">
                                         <Button.Style>
                                             <Style TargetType="Button">
                                                 <Setter Property="Background" Value="#6C757D"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="5"
+                                                                    BorderThickness="0">
+                                                                <ContentPresenter HorizontalAlignment="Center" 
+                                                                                VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
                                                 <Style.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter Property="Background" Value="#5A6268"/>
@@ -250,28 +225,26 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Button.Style>
-                                    </Button>
-                                </StackPanel>
+                                    </Button>                                </StackPanel>
                             </Grid>
-                        </Border></Grid></TabItem>
-                  <!-- Tab: Envío Automático -->
+                        </Border>
+                    </Grid>
+                </TabItem>                <!-- Tab: Envío Automático -->
                 <TabItem Header="🚀 Envío Automático" FontSize="14" Padding="15,8">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="20">
-                            <Grid.RowDefinitions>
+                    <Grid Margin="15">                        <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="10"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="10"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="10"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
+                                <RowDefinition Height="10"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <!-- Configuración SMTP -->
-                            <Border Grid.Row="0" Background="#F8F9FA" Padding="20" CornerRadius="5" Margin="0,0,0,0">
+                            <Border Grid.Row="0" Background="#F8F9FA" Padding="15" CornerRadius="5">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -455,29 +428,38 @@
                                               Foreground="#F44336" FontSize="11" FontStyle="Italic"
                                               Visibility="{Binding HasEmailExcel, Converter={StaticResource InverseBooleanConverter}, ConverterParameter=Visibility}"/>
                                 </StackPanel>
-                            </Grid>                            <!-- Descripción del proceso -->
-                            <Border Grid.Row="6" Background="#F1F8E9" Padding="15" CornerRadius="5" BorderBrush="#8BC34A" BorderThickness="1">
-                                <StackPanel>
-                                    <TextBlock Text="🔄 ¿Cómo funciona el Envío Automático?" 
-                                              FontWeight="SemiBold" Foreground="#33691E" Margin="0,0,0,8"/>
-                                    <TextBlock TextWrapping="Wrap" Foreground="#33691E" LineHeight="18" FontSize="12">
-                                        <Run Text="1. "/>
-                                        <Run Text="Selecciona un Excel con columnas: NIT, Empresa, Correo"/>
-                                        <LineBreak/>
-                                        <Run Text="2. "/>
-                                        <Run Text="El sistema lee automáticamente los documentos generados"/>
-                                        <LineBreak/>
-                                        <Run Text="3. "/>
-                                        <Run Text="Busca el correo correspondiente a cada empresa por NIT"/>
-                                        <LineBreak/>
-                                        <Run Text="4. "/>
-                                        <Run Text="Envía cada documento al correo correcto automáticamente"/>
-                                        <LineBreak/>
-                                        <Run Text="5. "/>
-                                        <Run Text="Los correos BCC/CC configurados se aplican automáticamente"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>                            <!-- Botón de envío automático -->
+                            </Grid>                            <!-- Barra de progreso para envío de emails -->
+                            <Grid Grid.Row="6"
+                                  Visibility="{Binding IsSendingEmail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Barra de progreso simple para emails -->
+                                <controls:SimpleProgressBar Grid.Row="0"
+                                                           ProgressValue="{Binding EmailProgressValue}"
+                                                           Title="📧 Enviando Documentos por Email"
+                                                           StatusMessage="{Binding EmailStatusMessage}"
+                                                           BackgroundColor="#2E7D32"
+                                                           TitleColor="White"
+                                                           PercentageColor="#4CAF50"
+                                                           MessageColor="#A5D6A7"
+                                                           BarForeground="#4CAF50"
+                                                           BarBackground="#1B5E20"
+                                                           BarHeight="18"/>                                <!-- Botón de cancelar envío de emails -->
+                                <Button Grid.Row="2"
+                                       Content="❌ Cancelar Envío" 
+                                       Background="#DC3545" Foreground="White" 
+                                       Padding="10,6" BorderThickness="0" 
+                                       FontWeight="SemiBold" FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       Command="{Binding CancelEmailSendingCommand}"
+                                       ToolTip="Cancelar el envío de emails en curso"/>
+                            </Grid>
+
+                            <!-- Botón de envío automático -->
                             <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="🚀 Enviar Documentos Automáticamente"
                                        Background="#4CAF50" Foreground="White"
@@ -498,11 +480,8 @@
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Button.Style>
-                                </Button>
-                            </StackPanel>
-                        </Grid>
-                    </ScrollViewer>
+                                    </Button.Style>                                </Button>
+                            </StackPanel>                        </Grid>
                 </TabItem>
             </TabControl>
         </DockPanel>

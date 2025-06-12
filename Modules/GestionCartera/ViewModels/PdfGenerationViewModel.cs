@@ -305,9 +305,10 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Error al abrir carpeta de salida");
-            StatusMessage = "Error al abrir carpeta de salida";
-        }
-    }    [RelayCommand(CanExecute = nameof(IsProcessing))]
+            StatusMessage = "Error al abrir carpeta de salida";        }
+    }
+    
+    [RelayCommand(CanExecute = nameof(IsProcessing))]
     private void CancelGeneration()
     {
         try
@@ -316,13 +317,14 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogInformation("🚫 Cancelación de generación solicitada por el usuario");
             StatusMessage = "Cancelando generación...";
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex)        {
             _logger.LogError(ex, "Error al cancelar generación");
             StatusMessage = "Error al cancelar";
         }
-    }    [RelayCommand]
-    private void ResetProgressCommand()
+    }
+    
+    [RelayCommand]
+    public void ResetProgressData()
     {
         try
         {
@@ -337,7 +339,7 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
     }
     
     [RelayCommand]
-    private void GoToEmailTab()
+    public void GoToEmailTab()
     {
         try
         {
@@ -354,7 +356,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
         {
             _logger.LogError(ex, "Error al navegar a la pestaña de email");
         }
-    }    protected override void ResetProgress()
+    }
+    
+    protected override void ResetProgress()
     {
         base.ResetProgress();
         // Resetear el progreso suavizado también

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestLog.Services.Core.Logging;
+using GestLog.Services.Core.UI;
 using GestLog.Modules.GestionCartera.Services;
 using GestLog.Modules.GestionCartera.Models;
 
@@ -19,14 +20,22 @@ public partial class AutomaticEmailViewModel : ObservableObject
 {
     private readonly IEmailService? _emailService;
     private readonly IExcelEmailService? _excelEmailService;
-    private readonly IGestLogLogger _logger;
-
-    [ObservableProperty] private string _selectedEmailExcelFilePath = string.Empty;
+    private readonly IGestLogLogger _logger;    [ObservableProperty] private string _selectedEmailExcelFilePath = string.Empty;
     [ObservableProperty] private bool _hasEmailExcel = false;
     [ObservableProperty] private bool _isSendingEmail = false;
     [ObservableProperty] private int _companiesWithEmail = 0;
     [ObservableProperty] private int _companiesWithoutEmail = 0;
     [ObservableProperty] private string _logText = string.Empty;
+      // Propiedades de progreso para envío de emails
+    [ObservableProperty] private double _emailProgressValue = 0.0;
+    [ObservableProperty] private string _emailStatusMessage = string.Empty;
+    [ObservableProperty] private int _currentEmailDocument = 0;
+    [ObservableProperty] private int _totalEmailDocuments = 0;
+      // Sistema de cancelación para emails
+    private CancellationTokenSource? _emailCancellationTokenSource;
+    
+    // Servicio de progreso suavizado para animaciones fluidas
+    private SmoothProgressService _smoothProgress = null!;
     
     // Propiedades adicionales necesarias para el wrapper
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -41,7 +50,10 @@ public partial class AutomaticEmailViewModel : ObservableObject
 
     public bool CanSendAutomatically => CanSendDocumentsAutomatically();
 
-    public AutomaticEmailViewModel(
+    /// <summary>
+    /// Determina si se puede cancelar el envío de emails
+    /// </summary>
+    public bool CanCancelEmailSending => IsSendingEmail && _emailCancellationTokenSource != null;    public AutomaticEmailViewModel(
         IEmailService? emailService,
         IExcelEmailService? excelEmailService,
         IGestLogLogger logger)
@@ -49,7 +61,10 @@ public partial class AutomaticEmailViewModel : ObservableObject
         _emailService = emailService;
         _excelEmailService = excelEmailService;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }    [RelayCommand]
+        
+        // Inicializar servicio de progreso suavizado
+        _smoothProgress = new SmoothProgressService(value => EmailProgressValue = value);
+    }[RelayCommand]
     public async Task SelectEmailExcelFileAsync()
     {
         try
@@ -78,7 +93,24 @@ public partial class AutomaticEmailViewModel : ObservableObject
             _logger.LogError(ex, "Error al seleccionar archivo Excel de correos");
             LogText += $"\n❌ Error: {ex.Message}";
         }
-    }    /// <summary>
+    }
+
+    /// <summary>
+    /// Cancela el envío de emails en curso
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanCancelEmailSending))]
+    public void CancelEmailSending()
+    {
+        _logger.LogInformation("⏹️ Usuario solicitó cancelación del envío de emails");
+        
+        // Cancelar la operación
+        _emailCancellationTokenSource?.Cancel();
+        
+        // Actualizar la UI
+        EmailStatusMessage = "Cancelando envío de emails...";
+        
+        _logger.LogDebug("🔄 Token de cancelación de emails activado");
+    }/// <summary>
     /// Analiza el matching entre documentos generados y correos del Excel
     /// </summary>
     private async Task AnalyzeEmailMatchingAsync()
@@ -282,31 +314,64 @@ public partial class AutomaticEmailViewModel : ObservableObject
         {
             _logger.LogWarning("No hay archivo Excel seleccionado para mapear emails");
             return false;
-        }
-
-        try
+        }        try
         {
             IsSendingEmail = true;
+            
+            // Inicializar progreso suave
+            _smoothProgress.SetValueDirectly(0);
+            CurrentEmailDocument = 0;
+            TotalEmailDocuments = documents.Count;
+            EmailStatusMessage = "Iniciando envío de emails...";
+            
+            // Crear token de cancelación para emails
+            _emailCancellationTokenSource = new CancellationTokenSource();
+            
+            // Notificar cambios en comandos
+            OnPropertyChanged(nameof(CanCancelEmailSending));
+            CancelEmailSendingCommand.NotifyCanExecuteChanged();
+            
             LogText += "\n🚀 Iniciando envío automático de documentos...\n";
 
             // Configurar SMTP
             await ConfigureSmtpFromConfigAsync(smtpConfig);
 
             // Procesar envíos
-            var result = await ProcessAutomaticEmailSendingAsync(documents, cancellationToken);
+            var result = await ProcessAutomaticEmailSendingAsync(documents, _emailCancellationTokenSource.Token);
 
             LogText += result ? "\n✅ Envío automático completado" : "\n❌ Envío automático falló";
             return result;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("📧 Envío de emails cancelado por el usuario");
+            LogText += "\n⏹️ Envío de emails cancelado por el usuario";
+            EmailStatusMessage = "Envío cancelado por el usuario";
+            return false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error durante el envío automático");
             LogText += $"\n❌ Error durante envío automático: {ex.Message}";
             return false;
-        }
-        finally
+        }        finally
         {
             IsSendingEmail = false;
+            
+            // Limpiar token de cancelación
+            _emailCancellationTokenSource?.Dispose();
+            _emailCancellationTokenSource = null;
+            
+            // Actualizar comandos
+            OnPropertyChanged(nameof(CanCancelEmailSending));
+            CancelEmailSendingCommand.NotifyCanExecuteChanged();
+              // Completar progreso si quedó incompleto
+            if (EmailProgressValue > 0 && EmailProgressValue < 100)
+            {
+                _smoothProgress.Report(100);
+                await Task.Delay(200); // Pausa visual
+                EmailStatusMessage = "Proceso finalizado";
+            }
         }
     }
 
@@ -357,7 +422,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
             smtpConfig.BccEmail, smtpConfig.CcEmail);
 
         await _emailService.ConfigureSmtpAsync(smtpConfig);
-    }private async Task<bool> ProcessAutomaticEmailSendingAsync(
+    }    private async Task<bool> ProcessAutomaticEmailSendingAsync(
         IReadOnlyList<GeneratedPdfInfo> documents, 
         CancellationToken cancellationToken)
     {
@@ -367,6 +432,11 @@ public partial class AutomaticEmailViewModel : ObservableObject
         var emailsFailed = 0;
         var orphansSent = 0;
         var totalEmails = documents.Count;
+        var processedDocuments = 0;        // Actualizar totales iniciales
+        TotalEmailDocuments = totalEmails;
+        CurrentEmailDocument = 0;
+        _smoothProgress.SetValueDirectly(0);
+        EmailStatusMessage = "Iniciando procesamiento de documentos...";
 
         // Obtener la configuración BCC para documentos huérfanos
         var smtpConfig = _emailService.CurrentConfiguration;
@@ -381,7 +451,13 @@ public partial class AutomaticEmailViewModel : ObservableObject
             cancellationToken.ThrowIfCancellationRequested();
 
             try
-            {
+            {                // Actualizar progreso con animación suave
+                processedDocuments++;
+                CurrentEmailDocument = processedDocuments;
+                var progressPercentage = (double)processedDocuments / totalEmails * 100;
+                _smoothProgress.Report(progressPercentage);
+                EmailStatusMessage = $"Procesando {document.NombreEmpresa} ({processedDocuments}/{totalEmails})";
+                
                 LogText += $"\n  📄 Procesando: {document.NombreArchivo} ({document.NombreEmpresa})";
 
                 var emails = await _excelEmailService.GetEmailsForCompanyAsync(
@@ -397,6 +473,9 @@ public partial class AutomaticEmailViewModel : ObservableObject
                     LogText += $" 📋 Sin correo → consolidar en BCC";
                     continue;
                 }
+
+                // Actualizar estado
+                EmailStatusMessage = $"Enviando email a {document.NombreEmpresa}...";
 
                 // Enviar documento con destinatario específico
                 var emailInfo = new EmailInfo
@@ -425,13 +504,12 @@ public partial class AutomaticEmailViewModel : ObservableObject
                 emailsFailed++;
                 LogText += $" ❌ Error: {ex.Message}";
             }
-        }
-
-        // Enviar documentos huérfanos consolidados al BCC
+        }        // Enviar documentos huérfanos consolidados al BCC
         if (orphanDocuments.Any() && !string.IsNullOrWhiteSpace(bccEmail))
         {
             try
             {
+                EmailStatusMessage = $"Enviando {orphanDocuments.Count} documentos sin destinatario...";
                 LogText += $"\n📤 Enviando {orphanDocuments.Count} documento(s) huérfano(s) consolidados al BCC...";
 
                 // Crear lista de rutas de archivos
@@ -471,7 +549,10 @@ public partial class AutomaticEmailViewModel : ObservableObject
         {
             LogText += $"\n⚠️ {orphanDocuments.Count} documento(s) sin correo y sin BCC configurado";
             emailsFailed += orphanDocuments.Count;
-        }
+        }        // Completar progreso con animación suave
+        _smoothProgress.Report(100);
+        await Task.Delay(200); // Pausa visual para mostrar completado
+        EmailStatusMessage = $"Completado: {emailsSent + orphansSent} emails enviados";
 
         LogText += $"\n📊 Resumen final: {emailsSent}/{totalEmails} emails enviados exitosamente";
         if (orphansSent > 0)
@@ -518,7 +599,13 @@ public partial class AutomaticEmailViewModel : ObservableObject
     /// </summary>
     public void Cleanup()
     {
-        // Limpiar recursos si es necesario
+        // Detener cualquier animación de progreso en curso
+        _smoothProgress?.Stop();
+        
+        // Cancelar cualquier operación de email en curso
+        _emailCancellationTokenSource?.Cancel();
+        _emailCancellationTokenSource?.Dispose();
+        _emailCancellationTokenSource = null;
     }
 
     /// <summary>
@@ -1044,11 +1131,9 @@ NIT: " + nit + @"</p>
   </tbody>
 </table>
 </div>";
-    }
-
-    // Este comando será llamado desde el MainViewModel con el parámetro correcto
+    }    // Este comando será llamado desde el MainViewModel con el parámetro correcto
     public async Task<bool> SendDocumentsAutomaticallyWithConfig(SmtpConfigurationViewModel smtpConfig)
     {
-        return await SendDocumentsAutomaticallyAsync(GeneratedDocuments, smtpConfig);
+        return await SendDocumentsAutomaticallyAsync(GeneratedDocuments, smtpConfig, CancellationToken.None);
     }
 }
