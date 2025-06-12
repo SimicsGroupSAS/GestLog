@@ -322,7 +322,7 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             StatusMessage = "Error al cancelar";
         }
     }    [RelayCommand]
-    public void ResetState()
+    private void ResetProgressCommand()
     {
         try
         {
@@ -335,8 +335,9 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             StatusMessage = "Error al reiniciar";
         }
     }
-      [RelayCommand]
-    public void GoToEmailTab()
+    
+    [RelayCommand]
+    private void GoToEmailTab()
     {
         try
         {

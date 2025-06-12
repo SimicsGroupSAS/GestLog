@@ -30,10 +30,9 @@
             </Border>
 
             <!-- Main Content -->
-            <TabControl x:Name="mainTabControl" Background="White" BorderThickness="0">                <!-- Tab: Generación de Documentos -->
-                <TabItem Header="📄 Generación de Documentos" FontSize="14" Padding="15,8">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="20">                        <Grid.RowDefinitions>
+            <TabControl x:Name="mainTabControl" Background="White" BorderThickness="0">
+                <!-- Tab: Generación de Documentos -->
+                <TabItem Header="📄 Generación de Documentos" FontSize="14" Padding="15,8">                    <Grid Margin="20">                        <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -229,7 +228,8 @@
                                             </Style>
                                         </Button.Style>
                                     </Button>
-                                      <Button Content="📂 Ver Documentos" 
+                                    
+                                    <Button Content="📂 Ver Documentos" 
                                            Background="#6C757D" 
                                            Foreground="White"
                                            Padding="20,15" 
@@ -237,6 +237,7 @@
                                            FontWeight="SemiBold"
                                            FontSize="14" 
                                            Margin="10"
+                                           CornerRadius="5"
                                            Command="{Binding OpenOutputFolderCommand}"
                                            ToolTip="Abrir la carpeta donde se guardaron los documentos">
                                         <Button.Style>
@@ -249,18 +250,15 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Button.Style>
-                                    </Button>                                </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
-                        </Border>
-                    </Grid>
-                    </ScrollViewer>
-                </TabItem>
+                        </Border></Grid></TabItem>
                   <!-- Tab: Envío Automático -->
                 <TabItem Header="🚀 Envío Automático" FontSize="14" Padding="15,8">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">                        <Grid Margin="20">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="15"/>
                                 <RowDefinition Height="Auto"/>
@@ -456,54 +454,30 @@
                                     <TextBlock Text="⚠️ Seleccione un archivo Excel válido" 
                                               Foreground="#F44336" FontSize="11" FontStyle="Italic"
                                               Visibility="{Binding HasEmailExcel, Converter={StaticResource InverseBooleanConverter}, ConverterParameter=Visibility}"/>
-                                </StackPanel>                            </Grid>                            <!-- Barra de progreso para envío de emails -->
-                            <Grid Grid.Row="6"
-                                 Visibility="{Binding IsSendingEmail, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="15"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="15"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                
-                                <!-- Barra de progreso simple para emails -->
-                                <controls:SimpleProgressBar Grid.Row="0"
-                                                           ProgressValue="{Binding EmailProgressValue}"
-                                                           Title="📧 Enviando Correos Automáticamente"
-                                                           StatusMessage="{Binding EmailStatusMessage}"
-                                                           BackgroundColor="#2E7D32"
-                                                           TitleColor="White"
-                                                           PercentageColor="#4CAF50"
-                                                           MessageColor="#C8E6C9"
-                                                           BarForeground="#66BB6A"
-                                                           BarBackground="#388E3C"
-                                                           BarHeight="20"/>
-                                
-                                <!-- Información adicional del progreso -->
-                                <TextBlock Grid.Row="2"
-                                          HorizontalAlignment="Center"
-                                          Foreground="#2E7D32"
-                                          FontSize="12"
-                                          FontWeight="SemiBold">
-                                    <Run Text="Email "/>
-                                    <Run Text="{Binding CurrentEmail, Mode=OneWay}"/>
-                                    <Run Text=" de "/>
-                                    <Run Text="{Binding TotalEmails, Mode=OneWay}"/>
-                                    <Run Text=" enviados"/>
-                                </TextBlock>
-                                
-                                <!-- Botón de cancelar envío de emails -->
-                                <Button Grid.Row="4"
-                                       Content="❌ Cancelar Envío" 
-                                       Background="#DC3545" Foreground="White" 
-                                       Padding="12,8" BorderThickness="0" 
-                                       FontWeight="SemiBold" FontSize="12"
-                                       HorizontalAlignment="Center"
-                                       Command="{Binding CancelEmailSendingCommand}"
-                                       IsEnabled="{Binding IsSendingEmail}"
-                                       ToolTip="Cancelar el envío automático de correos"/>
-                            </Grid><!-- Botón de envío automático -->
+                                </StackPanel>
+                            </Grid>                            <!-- Descripción del proceso -->
+                            <Border Grid.Row="6" Background="#F1F8E9" Padding="15" CornerRadius="5" BorderBrush="#8BC34A" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="🔄 ¿Cómo funciona el Envío Automático?" 
+                                              FontWeight="SemiBold" Foreground="#33691E" Margin="0,0,0,8"/>
+                                    <TextBlock TextWrapping="Wrap" Foreground="#33691E" LineHeight="18" FontSize="12">
+                                        <Run Text="1. "/>
+                                        <Run Text="Selecciona un Excel con columnas: NIT, Empresa, Correo"/>
+                                        <LineBreak/>
+                                        <Run Text="2. "/>
+                                        <Run Text="El sistema lee automáticamente los documentos generados"/>
+                                        <LineBreak/>
+                                        <Run Text="3. "/>
+                                        <Run Text="Busca el correo correspondiente a cada empresa por NIT"/>
+                                        <LineBreak/>
+                                        <Run Text="4. "/>
+                                        <Run Text="Envía cada documento al correo correcto automáticamente"/>
+                                        <LineBreak/>
+                                        <Run Text="5. "/>
+                                        <Run Text="Los correos BCC/CC configurados se aplican automáticamente"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>                            <!-- Botón de envío automático -->
                             <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="🚀 Enviar Documentos Automáticamente"
                                        Background="#4CAF50" Foreground="White"
