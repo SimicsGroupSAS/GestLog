@@ -12,7 +12,7 @@ WPF + .NET 9.0 | **Código**: inglés | **UI**: español (es-CO) | **MVVM** estr
 5. **MVVM**: Cero lógica en code-behind
 6. **Validación**: Antes de procesar
 7. **Errores**: Específicos del dominio + mensajes claros en español
-8. **Backup**: Siempre crear copia de seguridad antes de modificar archivos críticos
+8. **Backup**: Antes de modificar un archivo, y evitar dañarlo, crear una copia .bak en la misma carpeta para poder compararla si se daña algo
 
 ## 🏗️ **Arquitectura Base**
 
@@ -195,9 +195,11 @@ _logger.LogDebug("Processing Excel file: {FilePath}", filePath);
 6. **MVVM**: No lógica en code-behind
 7. **Validación**: Antes de procesar
 8. **Cancelación**: CancellationToken en operaciones largas
+9. **Backup**: Crear copia .bak antes de modificar archivos críticos
 
 **Si viola SRP → Refactorizar inmediatamente**
 
 ---
 
 *Actualizado: Junio 2025*
+``````
