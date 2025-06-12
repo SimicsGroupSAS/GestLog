@@ -12,6 +12,7 @@ WPF + .NET 9.0 | **Código**: inglés | **UI**: español (es-CO) | **MVVM** estr
 5. **MVVM**: Cero lógica en code-behind
 6. **Validación**: Antes de procesar
 7. **Errores**: Específicos del dominio + mensajes claros en español
+8. **Backup**: Siempre crear copia de seguridad antes de modificar archivos críticos
 
 ## 🏗️ **Arquitectura Base**
 
@@ -200,4 +201,3 @@ _logger.LogDebug("Processing Excel file: {FilePath}", filePath);
 ---
 
 *Actualizado: Junio 2025*
-````
