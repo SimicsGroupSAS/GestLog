@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestLog.Services.Core.Logging;
@@ -12,6 +13,7 @@ using GestLog.Services.Core.UI;
 using GestLog.Modules.GestionCartera.Services;
 using GestLog.Modules.GestionCartera.Models;
 using GestLog.Modules.GestionCartera.ViewModels.Base;
+using GestLog.Modules.GestionCartera.Exceptions;
 using Microsoft.Win32;
 using Ookii.Dialogs.Wpf;
 
@@ -106,10 +108,8 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
         {
             _logger.LogError(ex, "❌ Error inicializando rutas por defecto");
         }
-    }
-
-    [RelayCommand]
-    private void SelectExcelFile()
+    }    [RelayCommand]
+    private async Task SelectExcelFile()
     {        
         try
         {
@@ -119,20 +119,91 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
                 Filter = "Archivos Excel (*.xlsx;*.xls)|*.xlsx;*.xls|Todos los archivos (*.*)|*.*",
                 FilterIndex = 1,
                 RestoreDirectory = true
-            };            if (openFileDialog.ShowDialog() == true)
+            };
+            
+            if (openFileDialog.ShowDialog() == true)
             {
-                SelectedExcelFilePath = openFileDialog.FileName;
+                string selectedFile = openFileDialog.FileName;
+                
+                // Validar el archivo seleccionado
+                if (!File.Exists(selectedFile))
+                {
+                    throw new DocumentValidationException(
+                        $"El archivo seleccionado no existe: {selectedFile}",
+                        selectedFile,
+                        "FILE_NOT_FOUND");
+                }
+                
+                // Validar que es un archivo Excel
+                string extension = Path.GetExtension(selectedFile).ToLowerInvariant();
+                if (extension != ".xlsx" && extension != ".xls")
+                {
+                    throw new DocumentFormatException(
+                        $"El archivo seleccionado no es un Excel válido: {Path.GetFileName(selectedFile)}",
+                        selectedFile,
+                        "XLSX_XLS");
+                }
+                
+                // Validar que se puede acceder al archivo (no está bloqueado)
+                try 
+                {
+                    using (var stream = File.Open(selectedFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        // Si llega aquí, el archivo puede abrirse correctamente
+                    }
+                }
+                catch (IOException ioEx)
+                {
+                    throw new DocumentValidationException(
+                        $"No se puede acceder al archivo. Puede estar abierto en otra aplicación: {Path.GetFileName(selectedFile)}",
+                        selectedFile,
+                        "FILE_LOCKED",
+                        ioEx);
+                }
+                
+                // Si pasó todas las validaciones, asignar el archivo
+                SelectedExcelFilePath = selectedFile;
                 _logger.LogInformation("📊 Archivo Excel seleccionado: {Path}", SelectedExcelFilePath);
                 StatusMessage = $"Archivo Excel seleccionado: {Path.GetFileName(SelectedExcelFilePath)}";
                 
                 // Asegurar notificación en el hilo de UI
                 NotifyCommandsCanExecuteChanged();
+                
+                // Opcionalmente, validar la estructura del Excel
+                try
+                {
+                    StatusMessage = "Validando estructura del Excel...";
+                    // Solo validar si el servicio está disponible
+                    if (_pdfGenerator != null)
+                    {
+                        // Usar cancellation token nuevo para permitir cancelar solo esta operación
+                        using var tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // 30 segundos máximo
+                        await _pdfGenerator.ValidateExcelStructureAsync(SelectedExcelFilePath);
+                        StatusMessage = $"Archivo Excel válido: {Path.GetFileName(SelectedExcelFilePath)}";
+                    }
+                }
+                catch (Exception validateEx)
+                {
+                    _logger.LogWarning(validateEx, "⚠️ El archivo Excel tiene problemas de estructura");
+                    // No interrumpimos el flujo, solo advertimos
+                    StatusMessage = $"⚠️ Advertencia: {validateEx.Message}";
+                }
             }
+        }
+        catch (DocumentValidationException ex)
+        {
+            _logger.LogWarning(ex, "❌ Error de validación al seleccionar Excel: {ErrorCode}", ex.ValidationRule);
+            StatusMessage = $"Error al seleccionar archivo: {ex.Message}";
+        }
+        catch (DocumentFormatException ex)
+        {
+            _logger.LogWarning(ex, "❌ Error de formato al seleccionar Excel: {Format}", ex.ExpectedFormat);
+            StatusMessage = $"Error de formato: {ex.Message}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Error al seleccionar archivo Excel");
-            StatusMessage = "Error al seleccionar archivo Excel";
+            StatusMessage = $"Error al seleccionar archivo: {ex.Message}";
         }
     }
 
@@ -163,9 +234,7 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             _logger.LogError(ex, "❌ Error al seleccionar carpeta de salida");
             StatusMessage = "Error al seleccionar carpeta de salida";
         }
-    }
-
-    [RelayCommand]
+    }    [RelayCommand]
     private void SelectTemplate()
     {        
         try
@@ -180,27 +249,108 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
 
             if (openFileDialog.ShowDialog() == true)
             {
-                TemplateFilePath = openFileDialog.FileName;
-                UseDefaultTemplate = false;
+                string selectedTemplate = openFileDialog.FileName;
+                
+                // Validar que el archivo existe
+                if (!File.Exists(selectedTemplate))
+                {
+                    throw new TemplateException(
+                        $"El archivo de plantilla seleccionado no existe: {selectedTemplate}",
+                        selectedTemplate);
+                }
+                
+                // Validar que es una imagen
+                string extension = Path.GetExtension(selectedTemplate).ToLowerInvariant();
+                if (extension != ".png" && extension != ".jpg" && extension != ".jpeg" && extension != ".bmp")
+                {
+                    throw new TemplateException(
+                        $"El archivo seleccionado no es una imagen válida: {Path.GetFileName(selectedTemplate)}",
+                        selectedTemplate);
+                }
+                
+                // Validar que se puede acceder al archivo (no está bloqueado)
+                try 
+                {
+                    using var imageStream = File.OpenRead(selectedTemplate);
+                    // Si llega aquí, el archivo puede abrirse correctamente
+                }
+                catch (IOException ioEx)
+                {
+                    throw new TemplateException(
+                        $"No se puede acceder a la plantilla. Puede estar abierta en otra aplicación: {Path.GetFileName(selectedTemplate)}",
+                        selectedTemplate,
+                        ioEx);
+                }
+                
+                // Si todo está correcto, asignar la plantilla
+                TemplateFilePath = selectedTemplate;
+                UseDefaultTemplate = true;  // Activar el uso de la plantilla
                 _logger.LogInformation("🖼️ Plantilla personalizada seleccionada: {Path}", TemplateFilePath);
                 StatusMessage = $"Plantilla seleccionada: {Path.GetFileName(TemplateFilePath)}";
                 OnPropertyChanged(nameof(TemplateStatusMessage));
             }
+        }        catch (TemplateException ex)
+        {
+            _logger.LogWarning(ex, "❌ Error de plantilla: {TemplatePath}", ex.TemplatePath ?? "No especificada");
+            StatusMessage = $"Error con la plantilla: {ex.Message}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Error al seleccionar plantilla");
-            StatusMessage = "Error al seleccionar plantilla";
+            StatusMessage = $"Error al seleccionar plantilla: {ex.Message}";
         }
     }
 
     [RelayCommand]
     private void ClearTemplate()
     {
-        UseDefaultTemplate = false;
-        _logger.LogInformation("🗑️ Uso de plantilla desactivado");
-        StatusMessage = "Plantilla desactivada - se usará fondo blanco";
-        OnPropertyChanged(nameof(TemplateStatusMessage));
+        try
+        {
+            UseDefaultTemplate = false;
+            _logger.LogInformation("🗑️ Uso de plantilla desactivado");
+            StatusMessage = "Plantilla desactivada - se usará fondo blanco";
+            OnPropertyChanged(nameof(TemplateStatusMessage));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al desactivar la plantilla");
+            StatusMessage = "Error al desactivar la plantilla";
+        }
+    }
+    
+    /// <summary>
+    /// Restaura la plantilla predeterminada
+    /// </summary>
+    [RelayCommand]
+    private void RestoreDefaultTemplate()
+    {
+        try
+        {
+            var defaultTemplatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", DEFAULT_TEMPLATE_FILE);
+            
+            if (!File.Exists(defaultTemplatePath))
+            {
+                throw new TemplateException(
+                    $"No se encuentra la plantilla predeterminada: {DEFAULT_TEMPLATE_FILE}",
+                    defaultTemplatePath);
+            }
+            
+            TemplateFilePath = defaultTemplatePath;
+            UseDefaultTemplate = true;
+            _logger.LogInformation("🔄 Plantilla predeterminada restaurada: {Path}", defaultTemplatePath);
+            StatusMessage = $"Plantilla predeterminada restaurada: {DEFAULT_TEMPLATE_FILE}";
+            OnPropertyChanged(nameof(TemplateStatusMessage));
+        }
+        catch (TemplateException ex)
+        {
+            _logger.LogWarning(ex, "❌ Error al restaurar plantilla predeterminada");
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al restaurar plantilla predeterminada");
+            StatusMessage = "Error al restaurar plantilla predeterminada";
+        }
     }    [RelayCommand(CanExecute = nameof(CanGenerateDocuments))]
     private async Task GenerateDocuments()
     {
@@ -216,15 +366,21 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             CurrentDocument = 0;
             TotalDocuments = 0;
             GeneratedDocuments = new List<GeneratedPdfInfo>();
+            ShowCompletionPanel = false;
 
             _cancellationTokenSource = new CancellationTokenSource();
             
             _logger.LogInformation("🚀 Iniciando generación de documentos PDF");
+
+            // Validación previa de archivos y carpetas con excepciones específicas
+            ValidateInputs();
+            
             _logger.LogInformation("📊 Archivo Excel: {ExcelPath}", SelectedExcelFilePath);
             _logger.LogInformation("📁 Carpeta de salida: {OutputPath}", OutputFolderPath);
             _logger.LogInformation("🖼️ Plantilla: {Template}", UseDefaultTemplate ? TemplateFilePath : "Sin plantilla");
 
             StatusMessage = "Generando documentos PDF...";
+            LogText += $"\n{DateTime.Now:HH:mm:ss} - Iniciando generación de documentos PDF...\n";
 
             var templateToUse = UseDefaultTemplate ? TemplateFilePath : null;
             var result = await _pdfGenerator.GenerateEstadosCuentaAsync(
@@ -267,45 +423,178 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
                 StatusMessage = "❌ Error en la generación";
                 _logger.LogWarning("❌ Error en la generación de documentos");
             }
-        }
-        catch (OperationCanceledException)
+        }        catch (OperationCanceledException)
         {
             StatusMessage = "Generación cancelada";
             _logger.LogWarning("⚠️ Generación de documentos cancelada");
         }
+        catch (DocumentValidationException ex)
+        {
+            // Error de validación (archivo no encontrado, etc.)
+            StatusMessage = $"❌ Error de validación: {ex.Message}";
+            LogText += $"\n⚠️ Error de validación: {ex.Message}\n";
+            _logger.LogWarning(ex, "❌ Error de validación durante la generación de documentos");
+            
+            // Mostrar panel de finalización con mensaje personalizado para este error
+            CompletionMessage = $"⚠️ No se pudo completar la operación\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Archivo: {ex.FilePath}\n" +
+                               $"Regla de validación: {ex.ValidationRule}";
+            ShowCompletionPanel = true;
+        }
+        catch (DocumentFormatException ex)
+        {
+            // Error de formato del documento
+            StatusMessage = $"❌ Error de formato: {ex.Message}";
+            LogText += $"\n⚠️ Error de formato en documento: {ex.Message}\n";
+            _logger.LogWarning(ex, "❌ Error de formato durante la generación de documentos");
+            
+            // Mostrar panel de finalización con mensaje personalizado para este error
+            CompletionMessage = $"⚠️ Error de formato en el archivo\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Archivo: {ex.FilePath}\n" +
+                               $"Formato esperado: {ex.ExpectedFormat}";
+            ShowCompletionPanel = true;
+        }
+        catch (DocumentDataException ex)
+        {
+            // Error en los datos del documento
+            StatusMessage = $"❌ Error en los datos: {ex.Message}";
+            LogText += $"\n⚠️ Error en los datos: {ex.Message}\n";
+            _logger.LogWarning(ex, "❌ Error en los datos durante la generación de documentos");
+            
+            // Mostrar panel de finalización con mensaje personalizado para este error
+            CompletionMessage = $"⚠️ Error en los datos del archivo\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Origen de datos: {ex.DataSource ?? "No especificado"}";
+            ShowCompletionPanel = true;
+        }
+        catch (PdfGenerationException ex)
+        {
+            // Error específico en la generación de PDF
+            StatusMessage = $"❌ Error al generar PDF: {ex.Message}";
+            LogText += $"\n⚠️ Error al generar PDF: {ex.Message}\n";
+            _logger.LogWarning(ex, "❌ Error al generar PDF durante la generación de documentos");
+            
+            // Mostrar panel de finalización con mensaje personalizado para este error
+            CompletionMessage = $"⚠️ Error al generar los documentos PDF\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Ubicación: {ex.OutputPath ?? "No especificada"}";
+            ShowCompletionPanel = true;
+        }
+        catch (TemplateException ex)
+        {
+            // Error con la plantilla
+            StatusMessage = $"❌ Error en la plantilla: {ex.Message}";
+            LogText += $"\n⚠️ Error en la plantilla: {ex.Message}\n";
+            _logger.LogWarning(ex, "❌ Error en la plantilla durante la generación de documentos");
+            
+            // Mostrar panel de finalización con mensaje personalizado para este error
+            CompletionMessage = $"⚠️ Error con la plantilla del documento\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Plantilla: {ex.TemplatePath ?? "No especificada"}";
+            ShowCompletionPanel = true;
+        }
+        catch (GestLogDocumentException ex)
+        {
+            // Cualquier otra excepción de documento no capturada específicamente
+            StatusMessage = $"❌ Error: {ex.Message}";
+            LogText += $"\n⚠️ Error en documento: {ex.Message}\n";
+            _logger.LogWarning(ex, "❌ Error durante la generación de documentos. Código: {ErrorCode}", ex.ErrorCode);
+            
+            // Mostrar panel de finalización con mensaje personalizado para este error
+            CompletionMessage = $"⚠️ Error durante la generación\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Código de error: {ex.ErrorCode}";
+            ShowCompletionPanel = true;
+        }
         catch (Exception ex)
         {
+            // Cualquier otra excepción inesperada
             StatusMessage = $"❌ Error inesperado: {ex.Message}";
+            LogText += $"\n⚠️ Error inesperado: {ex.Message}\n";
             _logger.LogError(ex, "❌ Error inesperado durante la generación de documentos");
-        }
-        finally
+            
+            // Mostrar panel de finalización con mensaje personalizado para error genérico
+            CompletionMessage = $"⚠️ Error inesperado\n\n" +
+                               $"Problema: {ex.Message}\n\n" +
+                               $"Si el problema persiste, contacte al soporte técnico.";
+            ShowCompletionPanel = true;
+        }        finally
         {
-            IsProcessing = false;
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
+            // Asegurar que se limpian adecuadamente todos los recursos
+            try
+            {
+                // Marcar como no en proceso
+                IsProcessing = false;
+                
+                // Liberar el token de cancelación
+                if (_cancellationTokenSource != null)
+                {
+                    _cancellationTokenSource.Dispose();
+                    _cancellationTokenSource = null;
+                    _logger.LogDebug("✅ Token de cancelación liberado correctamente");
+                }
+                
+                // Asegurar que la UI refleja el estado final
+                CommandManager.InvalidateRequerySuggested();
+                NotifyCommandsCanExecuteChanged();
+                
+                _logger.LogInformation("✅ Proceso de generación finalizado y recursos liberados");
+            }
+            catch (Exception ex)
+            {
+                // Manejo de excepciones durante la limpieza para evitar crasheos
+                _logger.LogError(ex, "❌ Error durante la liberación de recursos");
+            }
         }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanOpenOutputFolder))]
+    }    [RelayCommand(CanExecute = nameof(CanOpenOutputFolder))]
     private void OpenOutputFolder()
     {
         try
         {
-            if (Directory.Exists(OutputFolderPath))
+            // Verificar que la carpeta existe antes de abrir
+            if (string.IsNullOrWhiteSpace(OutputFolderPath))
             {
-                System.Diagnostics.Process.Start("explorer.exe", OutputFolderPath);
-                _logger.LogInformation("📂 Carpeta de salida abierta: {Path}", OutputFolderPath);
+                throw new DocumentValidationException(
+                    "No se ha especificado una carpeta de salida",
+                    string.Empty,
+                    "OUTPUT_FOLDER_EMPTY");
             }
-            else
+            
+            if (!Directory.Exists(OutputFolderPath))
             {
-                StatusMessage = "La carpeta de salida no existe";
-                _logger.LogWarning("⚠️ La carpeta de salida no existe: {Path}", OutputFolderPath);
+                // Intentar crear la carpeta si no existe
+                try
+                {
+                    Directory.CreateDirectory(OutputFolderPath);
+                    _logger.LogInformation("📁 Se creó la carpeta de salida: {Path}", OutputFolderPath);
+                }
+                catch (Exception ex)
+                {
+                    throw new DocumentValidationException(
+                        $"No se pudo crear la carpeta de salida: {OutputFolderPath}",
+                        OutputFolderPath,
+                        "FOLDER_CREATE_ERROR",
+                        ex);
+                }
             }
+            
+            // Ahora que sabemos que la carpeta existe, abrirla
+            System.Diagnostics.Process.Start("explorer.exe", OutputFolderPath);
+            _logger.LogInformation("📂 Carpeta de salida abierta: {Path}", OutputFolderPath);
+            StatusMessage = $"Carpeta abierta: {OutputFolderPath}";
+        }
+        catch (DocumentValidationException ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+            _logger.LogWarning(ex, "⚠️ Error de validación al abrir carpeta: {ErrorCode}", ex.ValidationRule);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Error al abrir carpeta de salida");
-            StatusMessage = "Error al abrir carpeta de salida";        }
+            StatusMessage = $"Error al abrir carpeta: {ex.Message}";
+        }
     }
     
     [RelayCommand(CanExecute = nameof(IsProcessing))]
@@ -506,6 +795,70 @@ public partial class PdfGenerationViewModel : BaseDocumentGenerationViewModel
             {
                 GenerateDocumentsCommand.NotifyCanExecuteChanged();
             });
+        }
+    }
+    
+    /// <summary>
+    /// Valida las entradas antes de iniciar la generación de documentos
+    /// </summary>
+    /// <exception cref="DocumentValidationException">Si hay problemas de validación</exception>
+    /// <exception cref="TemplateException">Si hay problemas con la plantilla</exception>
+    private void ValidateInputs()
+    {
+        // Validar archivo Excel
+        if (string.IsNullOrWhiteSpace(SelectedExcelFilePath))
+        {
+            throw new DocumentValidationException(
+                "No se ha seleccionado un archivo Excel",
+                string.Empty,
+                "EXCEL_NOT_SELECTED");
+        }
+        
+        if (!File.Exists(SelectedExcelFilePath))
+        {
+            throw new DocumentValidationException(
+                $"El archivo Excel seleccionado no existe: {Path.GetFileName(SelectedExcelFilePath)}",
+                SelectedExcelFilePath,
+                "FILE_NOT_FOUND");
+        }
+        
+        // Validar extensión del archivo
+        string extension = Path.GetExtension(SelectedExcelFilePath).ToLowerInvariant();
+        if (extension != ".xlsx" && extension != ".xls")
+        {
+            throw new DocumentFormatException(
+                $"El archivo seleccionado no tiene formato Excel válido: {Path.GetFileName(SelectedExcelFilePath)}",
+                SelectedExcelFilePath,
+                "XLSX_XLS");
+        }
+        
+        // Validar carpeta de salida
+        if (string.IsNullOrWhiteSpace(OutputFolderPath))
+        {
+            throw new DocumentValidationException(
+                "No se ha seleccionado una carpeta de salida",
+                string.Empty,
+                "OUTPUT_FOLDER_NOT_SELECTED");
+        }
+        
+        // Validar plantilla si está activada
+        if (UseDefaultTemplate && !string.IsNullOrEmpty(TemplateFilePath))
+        {
+            if (!File.Exists(TemplateFilePath))
+            {
+                throw new TemplateException(
+                    $"No se encuentra el archivo de plantilla: {Path.GetFileName(TemplateFilePath)}",
+                    TemplateFilePath);
+            }
+            
+            // Validar que la plantilla es una imagen
+            string templateExt = Path.GetExtension(TemplateFilePath).ToLowerInvariant();
+            if (templateExt != ".png" && templateExt != ".jpg" && templateExt != ".jpeg" && templateExt != ".bmp")
+            {
+                throw new TemplateException(
+                    $"El archivo de plantilla no es una imagen válida: {Path.GetFileName(TemplateFilePath)}",
+                    TemplateFilePath);
+            }
         }
     }
 }

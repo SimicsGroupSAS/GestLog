@@ -5,11 +5,13 @@ namespace GestLog.Modules.GestionCartera.Exceptions
     /// <summary>
     /// Excepción base para errores relacionados con el envío de correos electrónicos
     /// </summary>
-    public class EmailException : Exception
+    public class EmailException : GestLogDocumentException
     {
-        public EmailException(string message) : base(message) { }
+        public EmailException(string message) 
+            : base(message, "EMAIL_ERROR") { }
         
-        public EmailException(string message, Exception innerException) : base(message, innerException) { }
+        public EmailException(string message, Exception innerException) 
+            : base(message, "EMAIL_ERROR", innerException) { }
     }
 
     /// <summary>

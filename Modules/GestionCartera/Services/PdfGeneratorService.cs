@@ -16,6 +16,7 @@ using iText.IO.Image;
 using iText.Kernel.Events;
 using iText.Kernel.Geom;
 using GestLog.Services.Core.Logging;
+using GestLog.Modules.GestionCartera.Exceptions;
 
 // Resolver ambigüedades de tipos
 using Rectangle = iText.Kernel.Geom.Rectangle;
@@ -92,16 +93,16 @@ public class PdfGeneratorService : IPdfGeneratorService
     public PdfGeneratorService(IGestLogLogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
-    public async Task<bool> ValidateExcelStructureAsync(string excelFilePath)
+    }    public async Task<bool> ValidateExcelStructureAsync(string excelFilePath)
     {
         try
-        {
-            if (!File.Exists(excelFilePath))
+        {            if (!File.Exists(excelFilePath))
             {
                 _logger.LogWarning("Archivo Excel no encontrado en: {FilePath}", excelFilePath);
-                return false;
+                throw new DocumentValidationException(
+                    $"No se encontró el archivo Excel en la ruta especificada: {excelFilePath}",
+                    excelFilePath, 
+                    "FILE_EXISTS");
             }
 
             bool result = false;
@@ -111,27 +112,41 @@ public class PdfGeneratorService : IPdfGeneratorService
                 {
                     using var workbook = new XLWorkbook(excelFilePath);
                     var worksheet = workbook.Worksheets.FirstOrDefault();
-                    
-                    if (worksheet == null)
+                      if (worksheet == null)
                     {
                         _logger.LogWarning("El archivo Excel no contiene hojas de trabajo");
-                        return;
-                    }
+                        throw new DocumentValidationException(
+                            "El archivo Excel no contiene hojas de trabajo válidas",
+                            excelFilePath,
+                            "WORKSHEETS_REQUIRED");                    }
                     
                     // Verificar que hay contenido en el Excel
                     if (!worksheet.CellsUsed().Any())
                     {
                         _logger.LogWarning("El archivo Excel está vacío");
-                        return;
+                        throw new DocumentValidationException(
+                            "El archivo Excel está vacío o no contiene datos",
+                            excelFilePath,
+                            "NON_EMPTY_REQUIRED");
+                    }
+
+                    // VALIDACIÓN ESTRICTA: Verificar si es de otro módulo del sistema
+                    if (IsFromOtherModule(worksheet))
+                    {
+                        string errorMessage = "Este archivo Excel pertenece a otro módulo del sistema y no es compatible con Gestión de Cartera";
+                        _logger.LogWarning(errorMessage);
+                        throw new DocumentValidationException(errorMessage, excelFilePath, "MODULE_COMPATIBILITY");
                     }
 
                     // En el proyecto original, las cabeceras están en la fila 4
                     var headerRow = worksheet.Row(EXCEL_HEADER_ROW);
-                    
-                    if (!headerRow.CellsUsed().Any())
+                      if (!headerRow.CellsUsed().Any())
                     {
                         _logger.LogWarning("La fila de encabezados está vacía");
-                        return;
+                        throw new DocumentValidationException(
+                            "La fila de encabezados (fila 4) está vacía",
+                            excelFilePath,
+                            "HEADERS_REQUIRED");
                     }
 
                     // Buscar columnas clave según el formato original (como se ve en SimplePdfGenerator.cs)
@@ -139,48 +154,50 @@ public class PdfGeneratorService : IPdfGeneratorService
                     _logger.LogInformation("Columnas encontradas en fila {Row}: {Columns}", 
                         EXCEL_HEADER_ROW, string.Join(", ", columns));
 
-                    // Verificar si tiene las columnas esenciales del formato original
-                    bool hasNombres = columns.Any(c => c.Contains("Nombres", StringComparison.OrdinalIgnoreCase));
-                    bool hasIdentificacion = columns.Any(c => c.Contains("Identificacion", StringComparison.OrdinalIgnoreCase));
-                    bool hasValorTotal = columns.Any(c => 
-                        c.Contains("Valor Total", StringComparison.OrdinalIgnoreCase) || 
-                        c.Contains("ValorTotal", StringComparison.OrdinalIgnoreCase));
+                    // VALIDACIÓN ESTRICTA: Verificar estructura exacta de GestionCartera
+                    ValidateGestionCarteraStructure(worksheet);
 
-                    _logger.LogInformation("Validación de columnas - Nombres: {HasNombres}, Identificacion: {HasId}, Valor: {HasValor}",
-                        hasNombres, hasIdentificacion, hasValorTotal);
-                        
-                    // Si no encuentra las columnas principales
-                    if (!hasNombres || !hasIdentificacion || !hasValorTotal)
-                    {
-                        _logger.LogWarning("El Excel no tiene la estructura esperada. Faltan columnas obligatorias.");
-                        _logger.LogWarning("Debe incluir columnas: Nombres, Identificacion y Valor Total");
-                        return;
-                    }
-                    
                     // Verificar que hay datos después de la fila de encabezado
                     int dataRowCount = worksheet.RowsUsed().Count(r => r.RowNumber() > EXCEL_HEADER_ROW);
-                    
-                    if (dataRowCount == 0)
+                      if (dataRowCount == 0)
                     {
                         _logger.LogWarning("El archivo Excel no contiene datos después del encabezado");
-                        return;
+                        throw new DocumentValidationException(
+                            "El archivo Excel no contiene datos después del encabezado",
+                            excelFilePath,
+                            "DATA_ROWS_REQUIRED");
                     }
                     
                     _logger.LogInformation("Validación exitosa. El archivo contiene {Count} registros de datos", dataRowCount);
                     result = true;
                 }
-                catch (Exception ex)
+                catch (DocumentValidationException)
                 {
-                    _logger.LogError(ex, "Error procesando Excel: {Path}", excelFilePath);
+                    throw; // Re-throw document validation exceptions
+                }
+                catch (Exception ex)
+                {                    _logger.LogError(ex, "Error procesando Excel: {Path}", excelFilePath);
+                    throw new DocumentValidationException(
+                        $"Error al procesar el archivo Excel: {ex.Message}", 
+                        excelFilePath,
+                        "PROCESSING_ERROR",
+                        ex);
                 }
             });
             
             return result;
         }
-        catch (Exception ex)
+        catch (DocumentValidationException)
         {
-            _logger.LogError(ex, "Error al validar estructura del Excel: {FilePath}", excelFilePath);
-            return false;
+            throw; // Re-throw validation exceptions
+        }
+        catch (Exception ex)
+        {            _logger.LogError(ex, "Error al validar estructura del Excel: {FilePath}", excelFilePath);
+            throw new DocumentValidationException(
+                $"Error durante la validación del archivo Excel: {ex.Message}", 
+                excelFilePath,
+                "VALIDATION_ERROR",
+                ex);
         }
     }
 
@@ -382,12 +399,22 @@ public class PdfGeneratorService : IPdfGeneratorService
         return await Task.Run(() =>
         {
             var clientGroups = new Dictionary<string, ClienteInfo>();
-            
-            using var workbook = new XLWorkbook(excelFilePath);
+              using var workbook = new XLWorkbook(excelFilePath);
             var worksheet = workbook.Worksheets.FirstOrDefault();
             
             if (worksheet == null)
                 return clientGroups;
+
+            // VALIDACIÓN ESTRICTA: Verificar estructura exacta de GestionCartera
+            try
+            {
+                ValidateGestionCarteraStructure(worksheet);
+                _logger.LogInformation("✅ Validación estricta de estructura completada durante lectura de datos");
+            }            catch (DocumentValidationException ex)
+            {
+                _logger.LogError(ex, "❌ Error de validación durante lectura: {ErrorMessage}", ex.Message);
+                throw; // Re-throw to stop processing invalid files
+            }
 
             // Configurar cultura española
             CultureInfo.CurrentCulture = new CultureInfo("es-CO");
@@ -1001,13 +1028,242 @@ public class PdfGeneratorService : IPdfGeneratorService
             orphanedPdfs.Count, _generatedPdfs.Count);
         
         return orphanedPdfs;
-    }
-
-    private static string SanitizeFileName(string fileName)
+    }    private static string SanitizeFileName(string fileName)
     {
         var invalidChars = System.IO.Path.GetInvalidFileNameChars();
         return new string(fileName.Where(c => !invalidChars.Contains(c)).ToArray())
             .Replace(" ", "_");
+    }    /// <summary>
+    /// Verifica si el archivo Excel pertenece a otro módulo del sistema
+    /// </summary>
+    /// <param name="worksheet">Hoja de trabajo de Excel</param>
+    /// <returns>True si pertenece a otro módulo</returns>
+    private bool IsFromOtherModule(IXLWorksheet worksheet)
+    {
+        try
+        {
+            _logger.LogInformation("🔍 Verificando si el archivo pertenece a otro módulo del sistema...");
+            
+            // Buscar indicadores específicos de otros módulos en las primeras filas
+            for (int rowNum = 1; rowNum <= Math.Min(10, worksheet.LastRowUsed()?.RowNumber() ?? 0); rowNum++)
+            {
+                var row = worksheet.Row(rowNum);
+                foreach (var cell in row.CellsUsed())
+                {
+                    var cellValue = cell.Value.ToString()?.ToUpperInvariant() ?? "";
+                    
+                    // Indicadores de otros módulos
+                    string[] otherModuleIndicators = {
+                        "FACTURACIÓN", "FACTURACION", "INVENTARIO", "CONTABILIDAD",
+                        "VENTAS", "COMPRAS", "NOMINA", "NÓMINA", "PRESUPUESTO",
+                        "KARDEX", "ACTIVOS FIJOS", "BANCOS", "TESORERÍA", "TESORERIA"
+                    };
+                    
+                    foreach (var indicator in otherModuleIndicators)
+                    {
+                        if (cellValue.Contains(indicator))
+                        {
+                            _logger.LogInformation("Detectado indicador de otro módulo: {Indicator} en celda {Address}",
+                                indicator, cell.Address);
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al verificar módulo del archivo");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Valida que el Excel tenga la estructura exacta esperada para GestionCartera
+    /// </summary>
+    /// <param name="worksheet">Hoja de trabajo de Excel</param>
+    private void ValidateGestionCarteraStructure(IXLWorksheet worksheet)
+    {
+        try
+        {
+            _logger.LogInformation("🔍 Iniciando validación estricta de estructura GestionCartera");
+            
+            var headerRow = worksheet.Row(EXCEL_HEADER_ROW);
+            
+            // Definir las columnas requeridas y sus posiciones exactas según el formato original
+            var requiredColumns = new Dictionary<string, string>
+            {
+                ["B"] = "Nombres",      // Columna B: Nombres
+                ["C"] = "NIT",          // Columna C: NIT/Identificación
+                ["L"] = "Numero",       // Columna L: Número de factura
+                ["M"] = "Fecha",        // Columna M: Fecha
+                ["N"] = "FechaVence",   // Columna N: Fecha de vencimiento
+                ["O"] = "ValorTotal",   // Columna O: Valor total
+                ["U"] = "Dias"          // Columna U: Días
+            };
+
+            var foundColumns = new List<string>();            // Verificar cada columna requerida en su posición exacta
+            foreach (var requiredColumn in requiredColumns)
+            {
+                var cell = headerRow.Cell(requiredColumn.Key);
+                var cellValue = cell.Value.ToString().Trim();
+                foundColumns.Add($"{requiredColumn.Key}='{cellValue}'");
+                
+                // Verificar que la columna contiene algo relacionado con lo esperado
+                bool isValidColumn = cellValue.Contains(requiredColumn.Value, StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Nombres", StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Identificacion", StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Numero", StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Fecha", StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Valor", StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Dias", StringComparison.OrdinalIgnoreCase) ||
+                                   cellValue.Contains("Total", StringComparison.OrdinalIgnoreCase);
+            }
+            
+            _logger.LogInformation("Columnas encontradas: {FoundColumns}", string.Join(", ", foundColumns));
+            
+            // Validar que hay datos válidos de GestionCartera en las filas
+            var dataRows = worksheet.RowsUsed().Where(r => r.RowNumber() > EXCEL_HEADER_ROW).ToList();
+            int validRows = 0;
+            
+            foreach (var row in dataRows.Take(5)) // Verificar las primeras 5 filas de datos
+            {
+                if (IsValidGestionCarteraRow(row))
+                {
+                    validRows++;
+                }
+            }
+            
+            if (validRows == 0)
+            {
+                string errorMessage = "El archivo no contiene datos válidos de Gestión de Cartera. " +
+                                     "Verifica que el formato del archivo sea correcto.";
+                _logger.LogWarning(errorMessage);
+                throw new DocumentValidationException(errorMessage, "N/A", "GESTION_CARTERA_FORMAT");
+            }
+            
+            _logger.LogInformation("✅ Validación estricta completada exitosamente. {ValidRows} filas válidas de {TotalRows} revisadas",
+                validRows, Math.Min(dataRows.Count, 5));
+        }
+        catch (DocumentValidationException)
+        {
+            throw; // Re-throw validation exceptions
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error durante validación estricta");
+            throw new DocumentValidationException(
+                $"Error durante la validación estricta: {ex.Message}",
+                "N/A",
+                "STRICT_VALIDATION_ERROR",
+                ex);
+        }
+    }
+
+    /// <summary>
+    /// Verifica si una fila contiene datos válidos de Gestión de Cartera
+    /// </summary>
+    /// <param name="row">Fila a validar</param>
+    /// <returns>True si la fila es válida</returns>
+    private bool IsValidGestionCarteraRow(IXLRow row)
+    {
+        try
+        {
+            int rowNum = row.RowNumber();
+              // Verificar que tenga los campos básicos requeridos
+            var nombre = row.Cell("B").Value.ToString().Trim();
+            var nit = row.Cell("C").Value.ToString().Trim();
+            var numero = row.Cell("L").Value.ToString().Trim();
+            var fecha = row.Cell("M").Value.ToString().Trim();
+            var fechaVence = row.Cell("N").Value.ToString().Trim();
+            var valorTotal = row.Cell("O").Value.ToString().Trim();
+            var dias = row.Cell("U").Value.ToString().Trim();
+            
+            // Una fila válida debe tener al menos nombre, número y valor total
+            if (string.IsNullOrWhiteSpace(nombre) || 
+                string.IsNullOrWhiteSpace(numero) || 
+                string.IsNullOrWhiteSpace(valorTotal))
+            {
+                _logger.LogDebug("Fila {RowNum} rechazada: No tiene número ni valor total", rowNum);
+                return false;
+            }
+            
+            // Verificar que el valor total sea numérico
+            if (!string.IsNullOrWhiteSpace(valorTotal))
+            {
+                var cleanedValue = valorTotal.Replace("$", "").Replace(",", "").Replace(".", ",");
+                if (!double.TryParse(cleanedValue, out double valor))
+                {
+                    _logger.LogDebug("Fila {RowNum} rechazada: Valor total no numérico '{ValorTotal}'", rowNum, valorTotal);
+                    return false;
+                }
+                
+                // Verificar que el valor no sea sospechosamente alto (probablemente error)
+                if (valor > 999999999) // Más de 999 millones
+                {
+                    _logger.LogDebug("Fila {RowNum} rechazada: Valor total sospechoso {Valor}", rowNum, valor);
+                    return false;
+                }
+            }
+            
+            // Verificar formato de fechas básico
+            if (!string.IsNullOrWhiteSpace(fecha) && !DateTime.TryParse(fecha, out _))
+            {
+                _logger.LogDebug("Fila {RowNum} rechazada: Fecha inválida '{Fecha}'", rowNum, fecha);
+                return false;
+            }
+            
+            if (!string.IsNullOrWhiteSpace(fechaVence) && !DateTime.TryParse(fechaVence, out _))
+            {
+                _logger.LogDebug("Fila {RowNum} rechazada: Fecha vencimiento inválida '{FechaVence}'", rowNum, fechaVence);
+                return false;
+            }
+              // Verificar que no contenga indicadores de otros módulos
+            var allCellsText = string.Join(" ", row.CellsUsed().Select(c => c.Value.ToString())).ToUpperInvariant();
+            string[] otherModuleIndicators = {
+                "FACTURACIÓN", "FACTURACION", "INVENTARIO", "CONTABILIDAD",
+                "KARDEX", "ACTIVOS FIJOS", "BANCOS", "TESORERÍA"
+            };
+            
+            if (otherModuleIndicators.Any(indicator => allCellsText.Contains(indicator)))
+            {
+                _logger.LogDebug("Fila {RowNum} rechazada: Contiene indicadores de otro módulo", rowNum);
+                return false;
+            }
+            
+            // Verificar que el nombre de empresa sea válido
+            if (nombre.Length < 2 || nombre.All(char.IsDigit))
+            {
+                _logger.LogDebug("Fila {RowNum} rechazada: Nombre de empresa no válido '{Nombre}'", rowNum, nombre);
+                return false;
+            }
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error validando fila {RowNum}: {Error}", row.RowNumber(), ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Convierte un número de columna a letra (1=A, 2=B, etc.)
+    /// </summary>
+    /// <param name="columnNumber">Número de columna</param>
+    /// <returns>Letra de columna</returns>
+    private static string GetColumnLetter(int columnNumber)
+    {
+        string columnLetter = "";
+        while (columnNumber > 0)
+        {
+            int remainder = (columnNumber - 1) % 26;
+            columnLetter = Convert.ToChar('A' + remainder) + columnLetter;
+            columnNumber = (columnNumber - 1) / 26;
+        }
+        return columnLetter;
     }
 }
 
