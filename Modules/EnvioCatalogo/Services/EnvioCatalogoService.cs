@@ -475,8 +475,11 @@ namespace GestLog.Modules.EnvioCatalogo.Services
 <head>
     <meta charset='utf-8'>
     <title>Prueba SMTP - Envío de Catálogo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
+    </style>
 </head>
-<body style='font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5;'>
+<body style='font-family: ""Myriad Pro"", ""Source Sans Pro"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Arial, sans-serif; margin: 20px; background-color: #f5f5f5;'>
     <div style='background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
         <h2 style='color: #2c3e50; margin-bottom: 20px;'>🧪 Prueba de Configuración SMTP</h2>
         
@@ -505,19 +508,25 @@ namespace GestLog.Modules.EnvioCatalogo.Services
         /// Genera el cuerpo personalizado del email con la plantilla comercial
         /// </summary>
         private string GeneratePersonalizedEmailBody(string clientName)
-        {        var template = @"
+        {            var template = @"
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset='utf-8'>
     <title>Importadores y Comercializadores de Aceros y Servicios - Simics Group SAS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
+        * {
+            font-family: ""Myriad Pro"", ""Source Sans Pro"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Arial, sans-serif !important;
+        }
+    </style>
 </head>
-<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa;'>
+<body style='font-family: ""Myriad Pro"", ""Source Sans Pro"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa;'>
     <div style='max-width: 800px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
         
         <!-- Header -->
-        <div style='background: linear-gradient(135deg, #0f8937, #12a043); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;'>
-            <h1 style='margin: 0; font-size: 24px; font-weight: bold;'>SIMICS GROUP SAS</h1>
+        <div style='background: linear-gradient(135deg, #118938, #37AB4E); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;'>
+            <h1 style='margin: 0; font-size: 24px; font-weight: bold;'>SIMICS GROUP S.A.S.</h1>
             <p style='margin: 5px 0 0 0; font-size: 16px; opacity: 0.9;'>Importadores y Comercializadores de Aceros y Servicios</p>
         </div>
         
@@ -528,68 +537,60 @@ namespace GestLog.Modules.EnvioCatalogo.Services
             </p>
             
             <p style='font-size: 14px; color: #34495e; margin-bottom: 20px; line-height: 1.6;'>
-                Mi nombre es <strong>XXXXXX</strong>, de la empresa Simics Group SAS. Estamos ubicados en Barranquilla desde donde atendemos a toda la costa atlántica y el interior del país.
+                Nos dirigimos a ustedes para presentarles <strong>SIMICS GROUP S.A.S.</strong>, una empresa dedicada a la importación y comercialización de todo tipo de aceros. Contamos con personal técnico y profesional con más de <strong>40 años de experiencia</strong> en el sector, lo que nos permite ofrecer soluciones que se adaptan a las necesidades específicas de cada cliente.
             </p>
             
-            <p style='font-size: 14px; color: #34495e; margin-bottom: 20px; line-height: 1.6;'>
-                El presente correo es para presentar nuestra empresa y ponerla a disposición de ustedes.
+            <p style='font-size: 14px; color: #34495e; margin-bottom: 25px; line-height: 1.6;'>
+                Hemos participado en proyectos representando a las siderúrgicas más importantes de China, Japón, Turquía entre otros países. Nuestra empresa se destaca por la calidad de los materiales y por brindar una atención rápida y oportuna a nuestros clientes, no solo en el suministro de materiales sino también por el acompañamiento técnico que brindamos en cada proyecto.
             </p>
             
-            <div style='background-color: #f8f9fa; padding: 25px; border-radius: 6px; margin: 25px 0;'>
-                <p style='font-size: 14px; color: #0f8937; margin-bottom: 15px; line-height: 1.7;'>
-                    🟢 <strong>Somos importadores y comercializadores de aceros de todo tipo</strong>, tenemos material en stock suficiente para cubrir sus necesidades, sin embargo, también participamos en proyectos representando a las siderúrgicas más importantes de China, Japón, Turquía entre otros países.
-                </p>
+            <!-- Productos Section -->
+            <div style='background-color: white; padding: 25px; border-radius: 6px; margin: 25px 0; border-left: 4px solid #118938; border: 1px solid #e0e0e0;'>
+                <h3 style='margin: 0 0 15px 0; font-size: 18px; color: #000000; font-weight: bold;'>Productos</h3>
                 
-                <p style='font-size: 14px; color: #0f8937; margin-bottom: 10px; line-height: 1.7;'>
-                    🟢 <strong>Podemos comercializar los siguientes productos:</strong>
-                </p>
-                
-                <ul style='font-size: 14px; color: #34495e; line-height: 1.7; margin-left: 20px;'>
-                    <li><strong>Láminas:</strong> A-36, A-283, A-131, A-572, A-516 GR 70, LAMINA ANTIDESGASTE 400-450HB, inoxidable y demás calidades especiales</li>
-                    <li><strong>Perfilería:</strong> Ángulos, canales UPN, Vigas H, I, HEA, HEB, IPE, W</li>
+                <ul style='font-size: 14px; color: #34495e; line-height: 1.7; margin: 0; padding-left: 20px;'>
+                    <li><strong>Láminas:</strong> A-36, A-283, A-131, A-572, A-516 GR 70</li>
+                    <li><strong>Lámina Antidesgaste</strong> 400-450HB</li>
+                    <li><strong>Lámina Inoxidable</strong></li>
+                    <li><strong>Perfilería:</strong> Ángulos, Canales UPN, Vigas H, I, HEA, HEB, IPE, WF</li>
                     <li><strong>Duraluminios</strong> en barra o platina</li>
                     <li><strong>Redondos:</strong> SAE 4140, 4340, 1045, 1020</li>
                     <li><strong>Barras perforadas</strong></li>
+                    <li><strong>Aceros especiales</strong> (Importamos según la necesidad del cliente)</li>
+                    <li><strong>Materiales de ferretería,</strong> soldaduras, repuestos para mantenimientos de plantas industriales</li>
                 </ul>
+            </div>
+              <!-- Servicios Section -->
+            <div style='background-color: white; padding: 25px; border-radius: 6px; margin: 25px 0; border-left: 4px solid #37AB4E; border: 1px solid #e0e0e0;'>
+                <h3 style='margin: 0 0 15px 0; font-size: 18px; color: #000000; font-weight: bold;'>Servicios</h3>
                 
-                <p style='font-size: 14px; color: #0f8937; margin: 15px 0; line-height: 1.7;'>
-                    🟢 <strong>Importamos calidades especiales</strong> que no se consiguen en el mercado Colombiano. Puede consultarnos si tiene algún requerimiento puntual para consultarlo con los diferentes molinos.
-                </p>
-                
-                <p style='font-size: 14px; color: #0f8937; margin: 15px 0; line-height: 1.7;'>
-                    🟢 <strong>Realizamos trabajos de mecanizado:</strong> oxicortes, corte por plasma, láser, torno, fresadora.
-                </p>
-                
-                <p style='font-size: 14px; color: #0f8937; margin: 15px 0; line-height: 1.7;'>
-                    🟢 <strong>Comercializamos materiales de ferretería,</strong> soldaduras y repuestos para mantenimientos de plantas industriales.
-                </p>
+                <ul style='font-size: 14px; color: #34495e; line-height: 1.7; margin: 0; padding-left: 20px;'>
+                    <li><strong>Oxicorte</strong></li>
+                    <li><strong>Corte por láser</strong></li>
+                    <li><strong>Corte por plasma</strong></li>
+                    <li><strong>Soldadura</strong></li>
+                    <li><strong>Sandblasting</strong></li>
+                    <li><strong>Pintura</strong></li>
+                    <li><strong>Torneado, fresado, taladrado</strong></li>
+                    <li><strong>Doblez, biselado, rolado</strong></li>
+                </ul>
             </div>
             
-            <div style='background-color: #e8f5e8; padding: 20px; border-left: 4px solid #0f8937; margin: 25px 0;'>
-                <p style='font-size: 14px; color: #2c3e50; margin: 0; line-height: 1.7; font-weight: 500;'>
-                    <strong>Nuestro valor agregado</strong> es que podemos atenderlos de una manera rápida y oportuna no solo vendiendo materiales sino realizando un acompañamiento técnico para cada uno de sus proyectos. Somos una empresa con un personal técnico y profesional que lleva más de <strong>40 años de experiencia</strong> en el sector.
-                </p>
-            </div>
-            
-            <p style='font-size: 14px; color: #34495e; margin: 20px 0; line-height: 1.6;'>
-                Nos gustaría que nos invitaran a participar en presupuestos o cotizaciones de materiales que requieran. Queremos hacernos visibles para ustedes y que encuentren en nosotros un apoyo para cada una de sus operaciones.
+            <p style='font-size: 14px; color: #34495e; margin: 25px 0; line-height: 1.6;'>
+                Adjuntamos nuestro catálogo de productos y servicios, si le interesa conocer más detalles sobre nuestra empresa o programar una reunión, no dude en responder a este correo o llamarnos al <strong>+57 XXXXXXX</strong>. Queremos hacernos visibles para ustedes y que encuentren en nosotros un apoyo para cada una de sus operaciones.
             </p>
             
-            <p style='font-size: 13px; color: #7f8c8d; margin: 25px 0; line-height: 1.6; font-style: italic;'>
-                Este correo es emitido para fines comerciales, en caso de no ser la persona encargada agradecemos enviar este mensaje al responsable de compras / abastecimiento o compartirnos su correo electrónico para enviarle este comunicado.
-            </p>
-            
-            <!-- Contact Info -->
-            <div style='background: linear-gradient(135deg, #9d9d9c, #8a8a89); color: white; padding: 25px; border-radius: 6px; margin: 30px 0;'>
-                <h3 style='margin: 0 0 15px 0; font-size: 18px; color: #ecf0f1;'>📞 Contacto</h3>
-                <p style='margin: 8px 0; font-size: 14px; line-height: 1.6;'>
-                    📧 <strong>Email:</strong> contactenos@simicsgroup.com
+            <p style='font-size: 14px; color: #2c3e50; margin: 25px 0; line-height: 1.6; font-weight: 500;'>
+                Gracias por su atención. Esperamos tener la oportunidad de colaborar con ustedes.
+            </p>            <!-- Contact Info -->
+            <div style='background: linear-gradient(135deg, #706F6F, #9D9D9C); color: white; padding: 25px; border-radius: 6px; margin: 30px 0;'>                <h3 style='margin: 0 0 15px 0; font-size: 18px; color: white;'>☰ Datos de Contacto</h3>                <p style='margin: 8px 0; font-size: 14px; line-height: 1.6;'>
+                    <span style='color: #e8e8e8; margin-right: 8px;'>✉</span><strong>Email:</strong> <a href='mailto:contactenos@simicsgroup.com' style='color: white !important; text-decoration: none;'>contactenos@simicsgroup.com</a>
                 </p>
                 <p style='margin: 8px 0; font-size: 14px; line-height: 1.6;'>
-                    📱 <strong>Celular:</strong> 315 224 05 20
+                    <span style='color: #e8e8e8; margin-right: 8px;'>☏</span><strong>Celular:</strong> 315 224 05 20
                 </p>
                 <p style='margin: 8px 0; font-size: 14px; line-height: 1.6;'>
-                    ☎️ <strong>Teléfono fijo:</strong> 605 329 55 05
+                    <span style='color: #e8e8e8; margin-right: 8px;'>☎</span><strong>Teléfono fijo:</strong> 605 329 55 05
                 </p>
             </div>
             
@@ -598,7 +599,7 @@ namespace GestLog.Modules.EnvioCatalogo.Services
         <!-- Footer -->
         <div style='background-color: #ecf0f1; padding: 20px; border-radius: 0 0 8px 8px; text-align: center;'>
             <p style='margin: 0; font-size: 12px; color: #7f8c8d;'>
-                <strong>SIMICS GROUP SAS</strong> - Más de 40 años de experiencia en el sector<br>
+                <strong>SIMICS GROUP S.A.S.</strong> - Más de 40 años de experiencia en el sector<br>
                 Este mensaje fue enviado desde nuestro sistema automatizado de comunicaciones comerciales.
             </p>
         </div>
