@@ -69,4 +69,55 @@ namespace GestLog.Modules.GestionCartera.Exceptions
             RecipientEmail = recipientEmail;
         }
     }
+
+    /// <summary>
+    /// Excepción para errores de validación de archivos Excel de correos
+    /// </summary>
+    public class EmailExcelValidationException : EmailException
+    {
+        public string? FilePath { get; }
+        public string? ExpectedFormat { get; }
+
+        public EmailExcelValidationException(string message, string? filePath = null, string? expectedFormat = null) 
+            : base($"Error de validación de archivo Excel de correos: {message}")
+        {
+            FilePath = filePath;
+            ExpectedFormat = expectedFormat;
+        }
+          public EmailExcelValidationException(string message, string? filePath, string? expectedFormat, Exception innerException) 
+            : base($"Error de validación de archivo Excel de correos: {message}", innerException)
+        {
+            FilePath = filePath;
+            ExpectedFormat = expectedFormat;
+        }
+    }
+
+    /// <summary>
+    /// Excepción para archivos Excel de correos con estructura incorrecta
+    /// </summary>
+    public class EmailExcelStructureException : EmailException
+    {
+        public string? FilePath { get; }
+        public string? ExpectedFormat { get; }
+        public string[] MissingColumns { get; }
+        public string[] FoundColumns { get; }
+
+        public EmailExcelStructureException(string message, string? filePath, string[] missingColumns, string[] foundColumns) 
+            : base($"Estructura de archivo Excel incorrecta: {message}")
+        {
+            FilePath = filePath;
+            ExpectedFormat = "Columnas requeridas: TIPO_DOC, NUM_ID, DIGITO_VER, EMPRESA, EMAIL";
+            MissingColumns = missingColumns ?? Array.Empty<string>();
+            FoundColumns = foundColumns ?? Array.Empty<string>();
+        }
+        
+        public EmailExcelStructureException(string message, string? filePath, string[] missingColumns, string[] foundColumns, Exception innerException) 
+            : base($"Estructura de archivo Excel incorrecta: {message}", innerException)
+        {
+            FilePath = filePath;
+            ExpectedFormat = "Columnas requeridas: TIPO_DOC, NUM_ID, DIGITO_VER, EMPRESA, EMAIL";
+            MissingColumns = missingColumns ?? Array.Empty<string>();
+            FoundColumns = foundColumns ?? Array.Empty<string>();
+        }
+    }
 }

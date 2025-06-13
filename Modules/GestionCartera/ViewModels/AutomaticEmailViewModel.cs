@@ -110,84 +110,161 @@ public partial class AutomaticEmailViewModel : ObservableObject
         EmailStatusMessage = "Cancelando envío de emails...";
         
         _logger.LogDebug("🔄 Token de cancelación de emails activado");
-    }/// <summary>
+    }    /// <summary>
     /// Analiza el matching entre documentos generados y correos del Excel
     /// </summary>
     private async Task AnalyzeEmailMatchingAsync()
     {
-        if (_excelEmailService == null || string.IsNullOrEmpty(SelectedEmailExcelFilePath))
+        if (_excelEmailService == null || string.IsNullOrWhiteSpace(SelectedEmailExcelFilePath) || !HasEmailExcel)
         {
-            _logger.LogWarning("No se puede analizar matching: servicios o datos no disponibles");
+            CompaniesWithEmail = 0;
+            CompaniesWithoutEmail = 0;
             return;
         }
 
         try
         {
-            _logger.LogInformation("📋 Cargando documentos generados desde pdfs_generados.txt...");
-            LogText += "\n📋 Cargando documentos generados...";
-            
-            // Primero cargar los documentos desde el archivo de texto
-            var documentsLoaded = await LoadGeneratedDocuments();
-            if (!documentsLoaded.Any())
+            // Si no hay documentos generados, cargarlos primero
+            if (GeneratedDocuments.Count == 0)
             {
-                _logger.LogWarning("No se encontraron documentos generados para analizar");
-                LogText += "\n⚠️ No se encontraron documentos generados";
+                LogText += "\n📄 Cargando documentos generados...";
+                var loadedDocuments = await LoadGeneratedDocuments();
+                UpdateGeneratedDocuments(loadedDocuments);
+            }
+
+            if (GeneratedDocuments.Count == 0)
+            {
+                LogText += "\n❌ No hay documentos generados para analizar";
+                LogText += "\n💡 Genere documentos primero y luego seleccione el archivo de correos";
                 return;
             }
 
-            _logger.LogInformation("🔍 Analizando matching entre {Count} documentos y correos del Excel...", documentsLoaded.Count);
-            LogText += $"\n🔍 Analizando matching entre {documentsLoaded.Count} documentos y correos...";
+            LogText += $"\n🎯 Analizando efectividad para {GeneratedDocuments.Count} documentos generados...";
+            
+            // Obtener información básica del archivo de correos
+            var validationInfo = await _excelEmailService.GetValidationInfoAsync(SelectedEmailExcelFilePath);
+            
+            if (!validationInfo.IsValid)
+            {
+                LogText += "\n❌ No se puede analizar: archivo de correos no válido";
+                return;
+            }
 
-            // Actualizar la lista de documentos generados
-            GeneratedDocuments = documentsLoaded;
-
-            int companiesWithEmailCount = 0;
-            int companiesWithoutEmailCount = 0;
+            LogText += $"\n📋 Archivo de correos: {validationInfo.ValidNitRows} NITs con {validationInfo.ValidEmailRows} emails válidos";
+            
+            // ANÁLISIS PRINCIPAL: ¿Cuántos documentos generados tienen email disponible?
+            await AnalyzeDocumentEmailMatchingAsync();
+            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error analizando matching de correos");
+            LogText += $"\n❌ Error en análisis: {ex.Message}";
+        }
+    }    /// <summary>
+    /// Analiza el matching específico entre documentos generados y correos disponibles
+    /// ENFOQUE CORRECTO: Partir de los documentos y verificar cuáles tienen email
+    /// </summary>
+    private async Task AnalyzeDocumentEmailMatchingAsync()
+    {
+        try
+        {
+            var documentsWithEmail = 0;
+            var documentsWithoutEmail = 0;
+            var totalEmailsFound = 0;
+            var companiesWithMultipleEmails = 0;
+            
+            LogText += $"\n🔍 Verificando emails para cada documento generado:";
 
             foreach (var document in GeneratedDocuments)
             {
                 try
                 {
-                    var emails = await _excelEmailService.GetEmailsForCompanyAsync(
-                        SelectedEmailExcelFilePath,
-                        document.NombreEmpresa,
-                        document.Nit,
-                        CancellationToken.None);
+                    var emails = await _excelEmailService!.GetEmailsForCompanyAsync(
+                        SelectedEmailExcelFilePath, 
+                        document.CompanyName ?? "N/A", 
+                        document.Nit ?? "");
 
-                    if (emails.Any())
+                    if (emails.Count > 0)
                     {
-                        companiesWithEmailCount++;
-                        _logger.LogDebug("✅ {Company} tiene {EmailCount} email(s)", document.NombreEmpresa, emails.Count);
-                        LogText += $"\n  ✅ {document.NombreEmpresa}: {emails.Count} email(s)";
+                        documentsWithEmail++;
+                        totalEmailsFound += emails.Count;
+                        
+                        if (emails.Count > 1)
+                        {
+                            companiesWithMultipleEmails++;
+                        }
+                        
+                        // Log detalles para las primeras empresas
+                        if (documentsWithEmail <= 5)
+                        {
+                            LogText += $"\n   ✅ {document.CompanyName} → {emails.Count} email(s)";
+                        }
                     }
                     else
                     {
-                        companiesWithoutEmailCount++;
-                        _logger.LogDebug("❌ {Company} sin email", document.NombreEmpresa);
-                        LogText += $"\n  ❌ {document.NombreEmpresa}: sin email";
+                        documentsWithoutEmail++;
+                        
+                        // Log primeras empresas sin email
+                        if (documentsWithoutEmail <= 5)
+                        {
+                            LogText += $"\n   ❌ {document.CompanyName} (NIT: {document.Nit}) → Sin email";
+                        }
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    companiesWithoutEmailCount++;
-                    _logger.LogWarning(ex, "Error analizando {Company}", document.NombreEmpresa);
+                    // Error en documento individual - contar como sin email
+                    documentsWithoutEmail++;
                 }
             }
 
-            CompaniesWithEmail = companiesWithEmailCount;
-            CompaniesWithoutEmail = companiesWithoutEmailCount;
+            var totalDocuments = GeneratedDocuments.Count;
+            var effectivenessPercentage = totalDocuments > 0 
+                ? (documentsWithEmail * 100.0 / totalDocuments) 
+                : 0;
 
-            _logger.LogInformation("📊 Análisis completado: {WithEmail} con email, {WithoutEmail} sin email", 
-                companiesWithEmailCount, companiesWithoutEmailCount);
-            LogText += $"\n📊 Resultado: {companiesWithEmailCount} con email, {companiesWithoutEmailCount} sin email";
+            // Actualizar propiedades para la UI
+            CompaniesWithEmail = documentsWithEmail;
+            CompaniesWithoutEmail = documentsWithoutEmail;
 
-            // Actualizar el estado para habilitar/deshabilitar envío automático
-            OnPropertyChanged(nameof(CanSendAutomatically));
+            // Resumen enfocado en documentos generados
+            LogText += $"\n";
+            LogText += $"\n📊 RESUMEN DE EFECTIVIDAD:";
+            LogText += $"\n   📄 Total documentos generados: {totalDocuments}";
+            LogText += $"\n   ✅ Documentos con destinatario: {documentsWithEmail}";
+            LogText += $"\n   ❌ Documentos sin destinatario: {documentsWithoutEmail}";
+            LogText += $"\n   🎯 Efectividad de envío: {effectivenessPercentage:F1}%";
+            LogText += $"\n   📧 Total emails encontrados: {totalEmailsFound}";
+            
+            if (companiesWithMultipleEmails > 0)
+            {
+                LogText += $"\n   📮 Empresas con múltiples emails: {companiesWithMultipleEmails}";
+            }
+
+            // Recomendaciones basadas en efectividad
+            if (effectivenessPercentage < 30)
+            {
+                LogText += $"\n⚠️ BAJA EFECTIVIDAD: Verifique que los NITs coincidan entre archivos";
+            }
+            else if (effectivenessPercentage < 70)
+            {
+                LogText += $"\n💡 EFECTIVIDAD MEDIA: Considere actualizar emails faltantes";
+            }
+            else
+            {
+                LogText += $"\n🎉 BUENA EFECTIVIDAD: La mayoría de documentos tienen destinatario";
+            }
+
+            if (GeneratedDocuments.Count > 10 && (documentsWithoutEmail <= 5 || documentsWithEmail <= 5))
+            {
+                LogText += $"\n   ℹ️ (Mostrando primeros 5 ejemplos de cada categoría)";
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error durante análisis de matching");
-            LogText += $"\n❌ Error durante análisis: {ex.Message}";
+            _logger.LogError(ex, "Error en análisis de matching específico");
+            LogText += $"\n❌ Error en análisis detallado: {ex.Message}";
         }
     }
 
@@ -373,37 +450,72 @@ public partial class AutomaticEmailViewModel : ObservableObject
                 EmailStatusMessage = "Proceso finalizado";
             }
         }
-    }
-
-    private void ValidateEmailExcelFileAsync()
+    }    private async void ValidateEmailExcelFileAsync()
     {
         try
         {
             if (_excelEmailService == null)
             {
                 _logger.LogWarning("⚠️ Servicio ExcelEmailService no disponible");
+                LogText += "\n⚠️ Servicio de correos no disponible";
+                HasEmailExcel = false;
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(SelectedEmailExcelFilePath) || !File.Exists(SelectedEmailExcelFilePath))
             {
                 _logger.LogWarning("❌ Archivo Excel de correos no existe o no está seleccionado");
-                LogText += $"\n❌ Error: Archivo de correos no válido";
+                LogText += "\n❌ Error: Debe seleccionar un archivo Excel válido";
                 HasEmailExcel = false;
                 SelectedEmailExcelFilePath = string.Empty;
                 return;
-            }        // Validar que el archivo es accesible - simplemente verificar que se puede leer
-            _logger.LogInformation("✅ Archivo Excel de correos válido y accesible");
-            LogText += $"\n✅ Archivo de correos válido: {Path.GetFileName(SelectedEmailExcelFilePath)}";
-            HasEmailExcel = true;
+            }
+
+            // Validar estructura del archivo Excel de correos
+            LogText += $"\n🔍 Validando estructura del archivo: {Path.GetFileName(SelectedEmailExcelFilePath)}";
+            
+            var validationResult = await _excelEmailService.GetValidationInfoAsync(SelectedEmailExcelFilePath);
+            
+            if (validationResult.IsValid)
+            {
+                _logger.LogInformation("✅ Archivo Excel de correos válido: {ValidNits} NITs, {ValidEmails} emails", 
+                    validationResult.ValidNitRows, validationResult.ValidEmailRows);
+                  LogText += $"\n✅ Archivo válido:";
+                LogText += $"\n   📊 {validationResult.TotalRows} filas de datos";
+                LogText += $"\n   🏢 {validationResult.ValidNitRows} registros NIT válidos";
+                LogText += $"\n   📧 {validationResult.ValidEmailRows} emails válidos";
+                
+                HasEmailExcel = true;
+            }            else
+            {
+                _logger.LogWarning("❌ Archivo Excel de correos no válido: {Message}", validationResult.Message);
+                LogText += $"\n❌ Archivo no válido: {validationResult.Message}";
+                
+                if (validationResult.MissingColumns.Length > 0)
+                {
+                    LogText += $"\n   🔍 Columnas faltantes: {string.Join(", ", validationResult.MissingColumns)}";
+                }
+                
+                if (validationResult.FoundColumns.Length > 0)
+                {
+                    LogText += $"\n   📋 Columnas encontradas: {string.Join(", ", validationResult.FoundColumns)}";
+                }
+                
+                LogText += "\n   ℹ️ Formato esperado: TIPO_DOC, NUM_ID, DIGITO_VER, EMPRESA, EMAIL";
+                
+                HasEmailExcel = false;
+                SelectedEmailExcelFilePath = string.Empty;
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al validar archivo Excel de correos");
-            LogText += $"\n❌ Error validando archivo de correos: {ex.Message}";
+            LogText += $"\n❌ Error inesperado: {ex.Message}";
+            LogText += "\n   💡 Verifique que el archivo no esté abierto en otra aplicación";
             HasEmailExcel = false;
+            SelectedEmailExcelFilePath = string.Empty;
         }
-    }    private async Task ConfigureSmtpFromConfigAsync(SmtpConfigurationViewModel config)
+    }private async Task ConfigureSmtpFromConfigAsync(SmtpConfigurationViewModel config)
     {
         if (_emailService == null) return;
 
@@ -549,7 +661,7 @@ public partial class AutomaticEmailViewModel : ObservableObject
         {
             LogText += $"\n⚠️ {orphanDocuments.Count} documento(s) sin correo y sin BCC configurado";
             emailsFailed += orphanDocuments.Count;
-        }        // Completar progreso con animación suave
+        }        // Completar progreso with animación suave
         _smoothProgress.Report(100);
         await Task.Delay(200); // Pausa visual para mostrar completado
         EmailStatusMessage = $"Completado: {emailsSent + orphansSent} emails enviados";

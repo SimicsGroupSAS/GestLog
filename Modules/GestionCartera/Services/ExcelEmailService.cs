@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
 using GestLog.Services.Core.Logging;
+using GestLog.Modules.GestionCartera.Exceptions;
 
 namespace GestLog.Modules.GestionCartera.Services
 {
@@ -27,9 +28,7 @@ namespace GestLog.Modules.GestionCartera.Services
         public ExcelEmailService(IGestLogLogger logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Construye un índice en memoria para búsquedas eficientes O(1)
         /// Solo se ejecuta si el archivo cambió desde la última carga
         /// </summary>
@@ -40,6 +39,23 @@ namespace GestLog.Modules.GestionCartera.Services
                 _logger.LogWarning("Archivo Excel no encontrado para construir índice: {ExcelPath}", excelFilePath ?? "null");
                 _emailIndex.Clear();
                 return;
+            }            // Primero validar la estructura del archivo antes de procesarlo
+            try
+            {
+                await ValidateExcelStructureAsync(excelFilePath, cancellationToken);
+            }
+            catch (EmailExcelValidationException ex)
+            {
+                _logger.LogError(ex, "❌ Archivo Excel de correos no válido: {Message}", ex.Message);
+                _emailIndex.Clear();
+                throw;
+            }
+            catch (EmailExcelStructureException ex)
+            {
+                _logger.LogError(ex, "❌ Estructura de archivo Excel incorrecta: {Message}. Columnas faltantes: {MissingColumns}", 
+                    ex.Message, string.Join(", ", ex.MissingColumns));
+                _emailIndex.Clear();
+                throw;
             }
 
             // Verificar si necesitamos recargar el índice
@@ -97,9 +113,7 @@ namespace GestLog.Modules.GestionCartera.Services
                 _emailIndex.Clear();
                 throw;
             }
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Procesa una hoja de Excel para construir el índice NIT->Emails
         /// </summary>
         private void ProcessWorksheetForIndex(IXLWorksheet worksheet, Dictionary<string, List<string>> index)
@@ -112,28 +126,54 @@ namespace GestLog.Modules.GestionCartera.Services
                 int correoCol = 6;     // Columna F - Email
 
                 var filas = worksheet.RowsUsed().Skip(1); // Omitir encabezados
+                var totalRows = filas.Count();
+                var processedRows = 0;
+                var validNits = 0;
+                var validEmails = 0;
+
+                _logger.LogDebug("🔍 Procesando {TotalRows} filas para índice en hoja {WorksheetName}", totalRows, worksheet.Name);
 
                 foreach (var row in filas)
                 {
                     try
                     {
+                        processedRows++;
                         string tipoDoc = row.Cell(tipoDocCol).GetString().Trim();
                         string numId = row.Cell(numIdCol).GetString().Trim();
                         string digitoVer = row.Cell(digitoVerCol).GetString().Trim();
                         string correo = row.Cell(correoCol).GetString().Trim();
 
-                        // Solo procesar NITs con emails válidos
-                        if (!tipoDoc.Equals("NIT", StringComparison.OrdinalIgnoreCase) || 
-                            string.IsNullOrEmpty(numId) || 
-                            string.IsNullOrWhiteSpace(correo))
-                            continue;
+                        // Debug: Log primera fila para diagnóstico
+                        if (processedRows <= 3)
+                        {
+                            _logger.LogDebug("📝 Fila {Row}: TIPO_DOC='{TipoDoc}', NUM_ID='{NumId}', EMAIL='{Email}'", 
+                                row.RowNumber(), tipoDoc, numId, correo);
+                        }
 
-                        // Construir NIT completo y normalizarlo
+                        // Verificar condiciones de validación
+                        var isNitType = tipoDoc.Equals("NIT", StringComparison.OrdinalIgnoreCase);
+                        var hasNumId = !string.IsNullOrEmpty(numId);
+                        var hasEmail = !string.IsNullOrWhiteSpace(correo);
+
+                        if (!isNitType || !hasNumId || !hasEmail)
+                        {
+                            if (processedRows <= 5) // Log primeras 5 filas para debug
+                            {
+                                _logger.LogDebug("❌ Fila {Row} rechazada: isNIT={IsNit}, hasNumId={HasNumId}, hasEmail={HasEmail}", 
+                                    row.RowNumber(), isNitType, hasNumId, hasEmail);
+                            }
+                            continue;
+                        }
+
+                        validNits++;                        // Construir NIT completo y normalizarlo
                         string nitCompleto = !string.IsNullOrEmpty(digitoVer) ? $"{numId}-{digitoVer}" : numId;
                         string nitNormalizado = NormalizeNit(nitCompleto);
 
                         if (string.IsNullOrEmpty(nitNormalizado))
+                        {
+                            _logger.LogDebug("❌ NIT normalizado vacío para: {NitCompleto}", nitCompleto);
                             continue;
+                        }
 
                         // Procesar múltiples correos separados por coma o punto y coma
                         string[] multipleEmails = correo.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -143,6 +183,8 @@ namespace GestLog.Modules.GestionCartera.Services
                             string emailLimpio = email.Trim();
                             if (IsValidEmail(emailLimpio))
                             {
+                                validEmails++;
+                                
                                 if (!index.ContainsKey(nitNormalizado))
                                 {
                                     index[nitNormalizado] = new List<string>();
@@ -151,15 +193,27 @@ namespace GestLog.Modules.GestionCartera.Services
                                 if (!index[nitNormalizado].Contains(emailLimpio, StringComparer.OrdinalIgnoreCase))
                                 {
                                     index[nitNormalizado].Add(emailLimpio);
+                                    
+                                    if (index.Count <= 3) // Log primeros registros para debug
+                                    {
+                                        _logger.LogDebug("✅ Indexado: NIT {Nit} → Email {Email}", nitNormalizado, emailLimpio);
+                                    }
                                 }
+                            }
+                            else if (processedRows <= 5)
+                            {
+                                _logger.LogDebug("❌ Email inválido: '{Email}'", emailLimpio);
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Error procesando fila en índice para hoja {WorksheetName}", worksheet.Name);
+                        _logger.LogWarning(ex, "Error procesando fila {Row} en índice para hoja {WorksheetName}", row.RowNumber(), worksheet.Name);
                     }
                 }
+
+                _logger.LogInformation("📊 Índice construido: {IndexCount} NITs, {ValidNits} NITs válidos, {ValidEmails} emails válidos de {ProcessedRows} filas", 
+                    index.Count, validNits, validEmails, processedRows);
             }
             catch (Exception ex)
             {
@@ -330,6 +384,248 @@ namespace GestLog.Modules.GestionCartera.Services
 
             _nitNormalizadoCache[nit] = normalized;
             return normalized;
+        }
+
+        public async Task<bool> ValidateExcelStructureAsync(string excelFilePath, CancellationToken cancellationToken = default)
+        {
+            var validationResult = await GetValidationInfoAsync(excelFilePath, cancellationToken);
+            
+            if (!validationResult.IsValid)
+            {
+                if (validationResult.MissingColumns.Length > 0)
+                {
+                    throw new EmailExcelStructureException(
+                        validationResult.Message, 
+                        excelFilePath,
+                        validationResult.MissingColumns,
+                        validationResult.FoundColumns);
+                }
+                else
+                {
+                    throw new EmailExcelValidationException(
+                        validationResult.Message, 
+                        excelFilePath, 
+                        "Archivo Excel válido con columnas: TIPO_DOC, NUM_ID, DIGITO_VER, EMPRESA, EMAIL");
+                }
+            }
+
+            return true;
+        }
+
+        public async Task<ExcelValidationResult> GetValidationInfoAsync(string excelFilePath, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("🔍 Validando estructura del archivo Excel: {ExcelPath}", excelFilePath);
+
+                // Validaciones básicas de archivo
+                if (string.IsNullOrWhiteSpace(excelFilePath))
+                {
+                    return ExcelValidationResult.Invalid(
+                        "La ruta del archivo no puede estar vacía",
+                        new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                        Array.Empty<string>(),
+                        new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+                }
+
+                if (!File.Exists(excelFilePath))
+                {
+                    return ExcelValidationResult.Invalid(
+                        $"El archivo no existe: {excelFilePath}",
+                        new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                        Array.Empty<string>(),
+                        new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+                }
+
+                // Validar extensión
+                var extension = Path.GetExtension(excelFilePath).ToLowerInvariant();
+                if (extension != ".xlsx" && extension != ".xls" && extension != ".xlsm")
+                {
+                    return ExcelValidationResult.Invalid(
+                        $"El archivo debe ser un Excel (.xlsx, .xls, .xlsm). Encontrado: {extension}",
+                        new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                        Array.Empty<string>(),
+                        new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+                }
+
+                return await Task.Run(() =>
+                {
+                    try
+                    {
+                        using var workbook = new XLWorkbook(excelFilePath);
+                        
+                        if (!workbook.Worksheets.Any())
+                        {
+                            return ExcelValidationResult.Invalid(
+                                "El archivo Excel no contiene hojas de trabajo",
+                                new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                                Array.Empty<string>(),
+                                new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+                        }
+
+                        var worksheet = workbook.Worksheets.First();
+                        var usedRange = worksheet.RangeUsed();
+                        
+                        if (usedRange == null || usedRange.RowCount() < 2)
+                        {
+                            return ExcelValidationResult.Invalid(
+                                "El archivo Excel está vacío o no contiene datos (mínimo 2 filas: encabezados + datos)",
+                                new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                                Array.Empty<string>(),
+                                new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+                        }
+
+                        // Validar estructura de columnas esperada
+                        return ValidateColumnStructure(worksheet, excelFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al validar archivo Excel: {ExcelPath}", excelFilePath);
+                        return ExcelValidationResult.Invalid(
+                            $"Error al leer el archivo Excel: {ex.Message}",
+                            new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                            Array.Empty<string>(),
+                            new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+                    }
+                }, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Validación de archivo Excel cancelada");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado validando archivo Excel: {ExcelPath}", excelFilePath);
+                return ExcelValidationResult.Invalid(
+                    $"Error inesperado: {ex.Message}",
+                    new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                    Array.Empty<string>(),
+                    new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+            }
+        }
+
+        /// <summary>
+        /// Valida que el archivo Excel tenga la estructura de columnas esperada
+        /// </summary>
+        private ExcelValidationResult ValidateColumnStructure(IXLWorksheet worksheet, string excelFilePath)
+        {
+            try
+            {
+                // Definir la estructura esperada basada en el código existente
+                var expectedStructure = new Dictionary<int, string>
+                {
+                    { 1, "IDENTIFICACION" },  // Columna A - Información general
+                    { 2, "TIPO_DOC" },        // Columna B - Tipo de documento  
+                    { 3, "NUM_ID" },          // Columna C - Número de identificación
+                    { 4, "DIGITO_VER" },      // Columna D - Dígito de verificación
+                    { 5, "EMPRESA" },         // Columna E - Nombre de la empresa
+                    { 6, "EMAIL" }            // Columna F - Correo electrónico
+                };
+
+                // Obtener encabezados de la primera fila
+                var firstRow = worksheet.Row(1);
+                var foundColumns = new List<string>();
+                var columnCount = Math.Min(6, firstRow.LastCellUsed()?.Address.ColumnNumber ?? 0);
+
+                for (int col = 1; col <= columnCount; col++)
+                {
+                    var cellValue = firstRow.Cell(col).GetValue<string>().Trim();
+                    foundColumns.Add(string.IsNullOrEmpty(cellValue) ? $"Columna_{col}" : cellValue);
+                }
+
+                // Verificar que tenemos al menos 6 columnas
+                if (columnCount < 6)
+                {
+                    return ExcelValidationResult.Invalid(
+                        $"El archivo debe tener al menos 6 columnas. Encontradas: {columnCount}",
+                        expectedStructure.Values.ToArray(),
+                        foundColumns.ToArray(),
+                        expectedStructure.Values.ToArray());
+                }
+
+                // Verificar contenido de datos - buscar registros con NIT y email válidos
+                var totalRows = worksheet.RangeUsed()?.RowCount() ?? 0;
+                var validEmailRows = 0;
+                var validNitRows = 0;
+                var sampleEmails = new List<string>();
+
+                // Analizar hasta 100 filas de datos para validación
+                var maxRowsToCheck = Math.Min(totalRows, 102); // 1 encabezado + 101 datos máximo
+                
+                for (int row = 2; row <= maxRowsToCheck; row++)
+                {
+                    try
+                    {
+                        var tipoDoc = worksheet.Cell(row, 2).GetValue<string>().Trim();
+                        var numId = worksheet.Cell(row, 3).GetValue<string>().Trim();
+                        var email = worksheet.Cell(row, 6).GetValue<string>().Trim();
+
+                        // Contar NITs válidos
+                        if (tipoDoc.Equals("NIT", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(numId))
+                        {
+                            validNitRows++;
+                        }
+
+                        // Contar emails válidos
+                        if (!string.IsNullOrWhiteSpace(email) && IsValidEmail(email))
+                        {
+                            validEmailRows++;
+                            if (sampleEmails.Count < 3)
+                            {
+                                sampleEmails.Add(email);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Ignorar errores en filas individuales durante validación
+                        continue;
+                    }
+                }
+
+                // Verificar si encontramos datos válidos
+                if (validNitRows == 0)
+                {
+                    return ExcelValidationResult.Invalid(
+                        "No se encontraron registros con TIPO_DOC = 'NIT' válidos en el archivo. " +
+                        "Verifique que la columna B contenga 'NIT' y la columna C contenga números de identificación.",
+                        expectedStructure.Values.ToArray(),
+                        foundColumns.ToArray(),
+                        Array.Empty<string>());
+                }
+
+                if (validEmailRows == 0)
+                {
+                    return ExcelValidationResult.Invalid(
+                        "No se encontraron correos electrónicos válidos en el archivo. " +
+                        "Verifique que la columna F contenga direcciones de email válidas.",
+                        expectedStructure.Values.ToArray(),
+                        foundColumns.ToArray(),
+                        Array.Empty<string>());
+                }
+
+                // Archivo válido
+                _logger.LogInformation("✅ Archivo Excel válido: {ValidNits} NITs, {ValidEmails} emails válidos", 
+                    validNitRows, validEmailRows);
+
+                return ExcelValidationResult.Valid(
+                    $"Archivo válido: {validNitRows} registros NIT, {validEmailRows} emails válidos",
+                    foundColumns.ToArray(),
+                    totalRows - 1, // Excluir fila de encabezados
+                    validEmailRows,
+                    validNitRows,
+                    sampleEmails.ToArray());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validando estructura de columnas");
+                return ExcelValidationResult.Invalid(
+                    $"Error validando estructura: {ex.Message}",
+                    new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" },
+                    Array.Empty<string>(),
+                    new[] { "TIPO_DOC", "NUM_ID", "DIGITO_VER", "EMPRESA", "EMAIL" });
+            }
         }
 
         #region Legacy Methods (mantener compatibilidad)
