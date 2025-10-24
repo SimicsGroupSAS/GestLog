@@ -1,9 +1,9 @@
 {
   "Database": {
-    "Server": "SIMICSGROUPWKS1\\SIMICSBD",
-    "Database": "BD_ Pruebas", 
+    "Server": "SIMICS-BAYUNCA\\DB_SIMICSGROUP",
+    "Database": "GestLogDB", 
     "Username": "sa",
-    "Password": "S1m1cS!DB_2025",
+    "Password": "AndresC89@",
     "UseIntegratedSecurity": false,
     "ConnectionTimeout": 30,
     "CommandTimeout": 30,
